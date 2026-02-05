@@ -1,16 +1,24 @@
-'use client';
+"use client";
 
-import React, { createContext, useContext, useEffect, useState, useCallback, type ReactNode } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useEffect,
+  useState,
+  useCallback,
+  type ReactNode,
+} from "react";
 import {
   ZkLoginSession,
   getZkLoginSession,
   storeZkLoginSession,
   clearZkLoginSession,
+  deleteAllZkLoginData,
   isAuthenticated as checkAuth,
   getBalance,
   formatSuiBalance,
   isSessionEpochValid,
-} from '@/lib/zklogin';
+} from "@/lib/zklogin";
 
 interface AuthContextType {
   isAuthenticated: boolean;
@@ -18,7 +26,7 @@ interface AuthContextType {
   session: ZkLoginSession | null;
   balance: string;
   login: (session: ZkLoginSession) => void;
-  logout: () => void;
+  logout: (deleteEverything?: boolean) => void;
   refreshBalance: () => Promise<void>;
   checkEpochValidity: () => Promise<boolean>;
 }
@@ -28,7 +36,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = useState<ZkLoginSession | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [balance, setBalance] = useState('0');
+  const [balance, setBalance] = useState("0");
 
   // Initialize auth state
   useEffect(() => {
@@ -46,7 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
                 const bal = await getBalance(storedSession.zkLoginAddress);
                 setBalance(formatSuiBalance(bal));
               } catch (e) {
-                console.error('Failed to fetch balance:', e);
+                console.error("Failed to fetch balance:", e);
               }
             } else {
               // Epoch expired, clear session
@@ -55,7 +63,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           }
         }
       } catch (error) {
-        console.error('Auth initialization error:', error);
+        console.error("Auth initialization error:", error);
       } finally {
         setIsLoading(false);
       }
@@ -73,10 +81,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       .catch(console.error);
   }, []);
 
-  const logout = useCallback(() => {
-    clearZkLoginSession();
+  const logout = useCallback((deleteEverything = false) => {
+    if (deleteEverything) {
+      // Complete wipe - delete all stored data
+      deleteAllZkLoginData();
+    } else {
+      // Normal logout - just clear active session, keep data stored
+      clearZkLoginSession();
+    }
     setSession(null);
-    setBalance('0');
+    setBalance("0");
   }, []);
 
   const refreshBalance = useCallback(async () => {
@@ -85,7 +99,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const bal = await getBalance(session.zkLoginAddress);
         setBalance(formatSuiBalance(bal));
       } catch (error) {
-        console.error('Failed to refresh balance:', error);
+        console.error("Failed to refresh balance:", error);
       }
     }
   }, [session]);
@@ -124,7 +138,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    throw new Error("useAuth must be used within an AuthProvider");
   }
   return context;
 }

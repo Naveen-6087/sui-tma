@@ -12,8 +12,10 @@ import { jwtDecode } from "jwt-decode";
 import { Transaction } from "@mysten/sui/transactions";
 
 // Configuration
-const SUI_RPC_URL = process.env.NEXT_PUBLIC_SUI_RPC_URL || "https://fullnode.testnet.sui.io";
-const PROVER_URL = process.env.NEXT_PUBLIC_PROVER_URL || "https://prover-dev.mystenlabs.com/v1";
+const SUI_RPC_URL =
+  process.env.NEXT_PUBLIC_SUI_RPC_URL || "https://fullnode.testnet.sui.io";
+const PROVER_URL =
+  process.env.NEXT_PUBLIC_PROVER_URL || "https://prover-dev.mystenlabs.com/v1";
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
 const REDIRECT_URL = process.env.NEXT_PUBLIC_REDIRECT_URL || "";
 
@@ -64,7 +66,7 @@ export interface ZkLoginSession {
  * Get Sui client instance
  */
 export function getSuiClient(): SuiGrpcClient {
-  return new SuiGrpcClient({ 
+  return new SuiGrpcClient({
     baseUrl: SUI_RPC_URL,
     network: "testnet",
   });
@@ -91,7 +93,7 @@ export async function setupZkLogin(): Promise<ZkLoginSetup> {
   const nonce = generateNonce(
     ephemeralKeyPair.getPublicKey(),
     maxEpoch,
-    randomness
+    randomness,
   );
 
   // Calculate estimated expiration time (approximately 24 hours per epoch)
@@ -129,15 +131,37 @@ export function getGoogleAuthUrl(nonce: string, redirectUrl?: string): string {
 }
 
 /**
- * Generate a deterministic salt from the sub claim
- * In production, use a secure backend service with encrypted storage
+ * Get or create user-specific salt component stored in localStorage
+ * This ensures same wallet address on login, but allows reset on "delete everything"
+ */
+function getUserSaltComponent(sub: string): string {
+  if (typeof window === "undefined") return "0";
+
+  const key = `${USER_SALT_KEY}_${sub}`;
+  let stored = localStorage.getItem(key);
+
+  if (!stored) {
+    // Generate new random component for first login
+    const random = Math.floor(Math.random() * 1000000000);
+    stored = random.toString();
+    localStorage.setItem(key, stored);
+  }
+
+  return stored;
+}
+
+/**
+ * Generate user salt for zkLogin
+ * Combines Google sub with stored random component for deterministic wallet
  */
 export function generateUserSalt(sub: string): string {
-  // For demo: derive a salt from sub using a simple hash
-  // In production, use a proper salt management service with HSM
+  const userComponent = getUserSaltComponent(sub);
+
+  // Combine sub + stored component for deterministic salt
+  const combined = `${sub}:${userComponent}`;
   let hash = 0;
-  for (let i = 0; i < sub.length; i++) {
-    const char = sub.charCodeAt(i);
+  for (let i = 0; i < combined.length; i++) {
+    const char = combined.charCodeAt(i);
     hash = (hash << 5) - hash + char;
     hash = hash & hash;
   }
@@ -151,8 +175,12 @@ export function generateUserSalt(sub: string): string {
 /**
  * Generate salt that combines Telegram user ID with sub for determinism
  */
-export function generateTelegramUserSalt(telegramUserId: number, sub: string): string {
-  const combined = `tg:${telegramUserId}:${sub}`;
+export function generateTelegramUserSalt(
+  telegramUserId: number,
+  sub: string,
+): string {
+  const userComponent = getUserSaltComponent(sub);
+  const combined = `tg:${telegramUserId}:${sub}:${userComponent}`;
   let hash = 0;
   for (let i = 0; i < combined.length; i++) {
     const char = combined.charCodeAt(i);
@@ -167,7 +195,10 @@ export function generateTelegramUserSalt(telegramUserId: number, sub: string): s
 /**
  * Get zkLogin address from JWT and salt
  */
-export function getZkLoginAddressFromJwt(jwt: string, userSalt: string): string {
+export function getZkLoginAddressFromJwt(
+  jwt: string,
+  userSalt: string,
+): string {
   // jwtToAddress(jwt, salt, isTestnet)
   return jwtToAddress(jwt, userSalt, false);
 }
@@ -201,10 +232,10 @@ export async function requestZkProof(
   ephemeralKeyPair: Ed25519Keypair,
   maxEpoch: number,
   randomness: string,
-  userSalt: string
+  userSalt: string,
 ): Promise<PartialZkLoginSignature> {
   const extendedEphemeralPublicKey = getExtendedEphemeralPublicKey(
-    ephemeralKeyPair.getPublicKey()
+    ephemeralKeyPair.getPublicKey(),
   );
 
   const payload = {
@@ -233,7 +264,9 @@ export async function requestZkProof(
         status: response.status,
         body: errorText,
       });
-      throw new Error(`Prover request failed: ${response.status} - ${errorText}`);
+      throw new Error(
+        `Prover request failed: ${response.status} - ${errorText}`,
+      );
     }
 
     const proof = await response.json();
@@ -250,21 +283,24 @@ export async function requestZkProof(
  */
 export async function signAndExecuteZkLoginTransaction(
   txb: Transaction,
-  session: ZkLoginSession
+  session: ZkLoginSession,
 ) {
   const suiClient = getSuiClient();
 
   // Reconstruct ephemeral keypair from Bech32-encoded string (suiprivkey1...)
-  const ephemeralKeyPair = Ed25519Keypair.fromSecretKey(session.ephemeralPrivateKey);
+  const ephemeralKeyPair = Ed25519Keypair.fromSecretKey(
+    session.ephemeralPrivateKey,
+  );
 
   // Set transaction sender
   txb.setSender(session.zkLoginAddress);
 
-  // Sign transaction with ephemeral key
-  const { bytes, signature: userSignature } = await txb.sign({
-    client: suiClient,
-    signer: ephemeralKeyPair,
-  });
+  // Build transaction explicitly first (alternative pattern from docs)
+  const bytes = await txb.build({ client: suiClient });
+
+  // Sign the built transaction bytes with ephemeral key
+  const { signature: userSignature } =
+    await ephemeralKeyPair.signTransaction(bytes);
 
   // Decode JWT to get claims
   const decodedJwt = decodeJwt(session.jwt);
@@ -274,7 +310,7 @@ export async function signAndExecuteZkLoginTransaction(
     BigInt(session.userSalt),
     "sub",
     decodedJwt.sub!,
-    decodedJwt.aud as string
+    decodedJwt.aud as string,
   ).toString();
 
   if (!session.zkProof) {
@@ -291,12 +327,14 @@ export async function signAndExecuteZkLoginTransaction(
     userSignature,
   });
 
-  // Execute transaction - convert base64 string to Uint8Array
-  const txBytes = Uint8Array.from(atob(bytes), (c) => c.charCodeAt(0));
-
+  // Execute transaction with zkLogin signature
   const result = await suiClient.executeTransaction({
-    transaction: txBytes,
+    transaction: bytes,
     signatures: [zkLoginSignature],
+    // options: {
+    //   showEffects: true,
+    //   showObjectChanges: true,
+    // },
   });
 
   return result;
@@ -307,11 +345,54 @@ export async function signAndExecuteZkLoginTransaction(
  */
 export async function getBalance(address: string): Promise<bigint> {
   const suiClient = getSuiClient();
-  const balanceResponse = await suiClient.core.getBalance({ 
+  const balanceResponse = await suiClient.core.getBalance({
     owner: address,
     coinType: "0x2::sui::SUI",
   });
   return BigInt(balanceResponse.balance.balance);
+}
+
+/**
+ * Create a transaction to send SUI to a recipient
+ */
+export function createSendTransaction(
+  recipientAddress: string,
+  amountInMist: bigint,
+  sendAll = false,
+): Transaction {
+  const tx = new Transaction();
+
+  if (sendAll) {
+    // Send all: transfer the gas coin itself (minus gas fees)
+    tx.transferObjects([tx.gas], tx.pure.address(recipientAddress));
+  } else {
+    // Send specific amount: split from gas coin and transfer
+    const [coin] = tx.splitCoins(tx.gas, [tx.pure.u64(amountInMist)]);
+    tx.transferObjects([coin], tx.pure.address(recipientAddress));
+  }
+
+  return tx;
+}
+
+/**
+ * Send SUI to a recipient address using zkLogin
+ */
+export async function sendSui(
+  recipientAddress: string,
+  amountInSui: number,
+  session: ZkLoginSession,
+  sendAll = false,
+): Promise<any> {
+  // Convert SUI to MIST (1 SUI = 1_000_000_000 MIST)
+  const amountInMist = BigInt(Math.floor(amountInSui * 1_000_000_000));
+
+  // Create transaction
+  const tx = createSendTransaction(recipientAddress, amountInMist, sendAll);
+
+  // Sign and execute with zkLogin
+  const result = await signAndExecuteZkLoginTransaction(tx, session);
+
+  return result;
 }
 
 /**
@@ -325,6 +406,7 @@ export function formatSuiBalance(balance: bigint): string {
 // Session Storage Keys
 const SESSION_KEY = "zklogin_session";
 const SETUP_KEY = "zklogin_setup";
+const USER_SALT_KEY = "zklogin_user_salt";
 
 /**
  * Store zkLogin setup data (before OAuth)
@@ -368,11 +450,12 @@ export function clearZkLoginSetup(): void {
 }
 
 /**
- * Store zkLogin session data
+ * Store zkLogin session data in localStorage for persistence
  */
 export function storeZkLoginSession(session: ZkLoginSession): void {
   if (typeof window !== "undefined") {
-    sessionStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    localStorage.setItem(SESSION_KEY, JSON.stringify(session));
+    sessionStorage.setItem("zklogin_active", "true");
   }
 }
 
@@ -381,19 +464,42 @@ export function storeZkLoginSession(session: ZkLoginSession): void {
  */
 export function getZkLoginSession(): ZkLoginSession | null {
   if (typeof window !== "undefined") {
-    const data = sessionStorage.getItem(SESSION_KEY);
+    const data = localStorage.getItem(SESSION_KEY);
     return data ? JSON.parse(data) : null;
   }
   return null;
 }
 
 /**
- * Clear zkLogin session
+ * Clear active session (normal logout) - keeps data in localStorage
  */
 export function clearZkLoginSession(): void {
   if (typeof window !== "undefined") {
-    sessionStorage.removeItem(SESSION_KEY);
+    sessionStorage.removeItem("zklogin_active");
     sessionStorage.removeItem(SETUP_KEY);
+  }
+}
+
+/**
+ * Delete everything - completely wipes all zkLogin data including user salt
+ * This will cause a NEW wallet to be generated on next login
+ */
+export function deleteAllZkLoginData(): void {
+  if (typeof window !== "undefined") {
+    // Remove session data
+    localStorage.removeItem(SESSION_KEY);
+    sessionStorage.removeItem("zklogin_active");
+    sessionStorage.removeItem(SETUP_KEY);
+
+    // Remove all user salt components (allows new wallet generation)
+    const keysToRemove: string[] = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(USER_SALT_KEY)) {
+        keysToRemove.push(key);
+      }
+    }
+    keysToRemove.forEach((key) => localStorage.removeItem(key));
   }
 }
 
@@ -401,15 +507,21 @@ export function clearZkLoginSession(): void {
  * Check if user is authenticated
  */
 export function isAuthenticated(): boolean {
+  if (typeof window === "undefined") return false;
+
+  // Check if session is active
+  const isActive = sessionStorage.getItem("zklogin_active") === "true";
+  if (!isActive) return false;
+
   const session = getZkLoginSession();
   if (!session) return false;
-  
+
   // Check if JWT is still valid
   if (isJwtExpired(session.jwt)) {
     clearZkLoginSession();
     return false;
   }
-  
+
   return true;
 }
 
@@ -425,7 +537,9 @@ export async function getCurrentEpoch(): Promise<number> {
 /**
  * Check if session epoch is still valid
  */
-export async function isSessionEpochValid(session: ZkLoginSession): Promise<boolean> {
+export async function isSessionEpochValid(
+  session: ZkLoginSession,
+): Promise<boolean> {
   const currentEpoch = await getCurrentEpoch();
   return currentEpoch <= session.maxEpoch;
 }
