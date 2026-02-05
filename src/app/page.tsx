@@ -40,7 +40,7 @@ export default function Home() {
           {/* Welcome Message */}
           {initDataUser && (
             <div className="tma-badge tma-badge-info" style={{ marginBottom: 16 }}>
-              👋 Welcome, {initDataUser.first_name}!
+              Welcome, {initDataUser.first_name}!
             </div>
           )}
         </div>
@@ -61,13 +61,20 @@ export default function Home() {
               </div>
             </div>
 
-            {/* CTA */}
-            <Link href="/dashboard" style={{ textDecoration: 'none' }}>
+            {/* Go to Trading Hub */}
+            <Link href="/demo" style={{ textDecoration: 'none' }}>
               <button className="tma-btn tma-btn-full tma-btn-secondary" style={{ gap: 10 }}>
-                <span>Go to Dashboard</span>
+                <span>Go to Trading Hub</span>
                 <svg style={{ width: 20, height: 20 }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                 </svg>
+              </button>
+            </Link>
+
+            {/* Go to Dashboard */}
+            <Link href="/dashboard" style={{ textDecoration: 'none' }}>
+              <button className="tma-btn tma-btn-full" style={{ gap: 10, background: 'var(--tg-theme-secondary-bg-color)' }}>
+                <span>Dashboard</span>
               </button>
             </Link>
           </div>
@@ -89,13 +96,27 @@ export default function Home() {
               </div>
             </div>
 
-            {/* CTA Button */}
+            {/* Trading Hub Button (works with wallet in demo layout) */}
+            <Link href="/demo" style={{ textDecoration: 'none' }}>
+              <button className="tma-btn tma-btn-full tma-btn-secondary" style={{ padding: '14px 24px' }}>
+                <span>Connect Wallet & Trade</span>
+              </button>
+            </Link>
+
+            {/* Divider */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <div style={{ flex: 1, height: 1, background: 'var(--tg-theme-hint-color, #999)', opacity: 0.3 }} />
+              <span style={{ fontSize: 12, color: 'var(--tg-theme-hint-color, #999)' }}>or</span>
+              <div style={{ flex: 1, height: 1, background: 'var(--tg-theme-hint-color, #999)', opacity: 0.3 }} />
+            </div>
+
+            {/* zkLogin Button */}
             <Link href="/login" style={{ textDecoration: 'none' }}>
               <button className="tma-btn tma-btn-gradient tma-btn-full" style={{ padding: '16px 24px' }}>
                 <svg style={{ width: 20, height: 20 }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
                 </svg>
-                <span>Get Started</span>
+                <span>Sign in with Google (zkLogin)</span>
               </button>
             </Link>
           </div>
@@ -110,8 +131,8 @@ export default function Home() {
                 <span style={{ fontSize: 14, fontWeight: 600 }}>1</span>
               </div>
               <div>
-                <p className="tma-step-title">Connect with zkLogin</p>
-                <p className="tma-hint" style={{ fontSize: 13 }}>Sign in with Google, no private keys needed</p>
+                <p className="tma-step-title">Connect Wallet or zkLogin</p>
+                <p className="tma-hint" style={{ fontSize: 13 }}>Use your wallet or sign in with Google</p>
               </div>
             </div>
 

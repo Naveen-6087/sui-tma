@@ -147,14 +147,14 @@ export default function DashboardPage() {
             <p className="tma-action-subtitle">View active</p>
           </Link>
 
-          <Link href="/market" className="tma-action-item">
+          <Link href="/demo" className="tma-action-item">
             <div className="tma-icon tma-icon-purple" style={{ margin: '0 auto' }}>
               <svg style={{ width: 24, height: 24 }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>
             </div>
-            <p className="tma-action-title">Market</p>
-            <p className="tma-action-subtitle">View prices</p>
+            <p className="tma-action-title">Trading Hub</p>
+            <p className="tma-action-subtitle">DeFi demos</p>
           </Link>
 
           <button

@@ -666,3 +666,405 @@ a {
   background: rgba(239, 68, 68, 0.15);
   color: #dc2626;
 }
+
+/* ========================================
+   INTENT CREATION STYLES
+   ======================================== */
+
+/* CSS Variables for consistent theming */
+:root {
+  --tma-success: #22c55e;
+  --tma-success-bg: rgba(34, 197, 94, 0.15);
+  --tma-error: #ef4444;
+  --tma-error-bg: rgba(239, 68, 68, 0.15);
+  --tma-warning: #f59e0b;
+  --tma-warning-bg: rgba(245, 158, 11, 0.15);
+  --tma-accent-color: var(--tg-theme-button-color, #3b82f6);
+  --tma-accent-bg: rgba(59, 130, 246, 0.15);
+  --tma-hint-color: var(--tg-theme-hint-color, #6b7280);
+  --tma-border-color: var(--tg-theme-secondary-bg-color, #e5e7eb);
+  --tma-secondary-bg: var(--tg-theme-secondary-bg-color, #f4f4f5);
+}
+
+/* Form group */
+.tma-form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.tma-label {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--tma-hint-color);
+}
+
+/* Select button group */
+.tma-select-group {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.tma-select-btn {
+  flex: 1;
+  min-width: 80px;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  border-radius: 10px;
+  border: 2px solid var(--tma-border-color);
+  background: var(--tg-theme-bg-color, #ffffff);
+  color: var(--tg-theme-text-color, #1f2937);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tma-select-btn:active {
+  transform: scale(0.98);
+}
+
+.tma-select-btn.active {
+  border-color: var(--tma-accent-color);
+  background: var(--tma-accent-bg);
+  color: var(--tma-accent-color);
+}
+
+/* Toggle buttons */
+.tma-toggle-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 14px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  border-radius: 12px;
+  border: 2px solid var(--tma-border-color);
+  background: var(--tg-theme-bg-color, #ffffff);
+  color: var(--tg-theme-text-color, #1f2937);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tma-toggle-btn:active {
+  transform: scale(0.98);
+}
+
+.tma-toggle-btn.active {
+  border-color: var(--tma-accent-color);
+  background: var(--tma-accent-bg);
+  color: var(--tma-accent-color);
+}
+
+.tma-toggle-btn.active.buy {
+  border-color: var(--tma-success);
+  background: var(--tma-success-bg);
+  color: var(--tma-success);
+}
+
+.tma-toggle-btn.active.sell {
+  border-color: var(--tma-error);
+  background: var(--tma-error-bg);
+  color: var(--tma-error);
+}
+
+/* Input wrapper with prefix */
+.tma-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.tma-input-prefix {
+  position: absolute;
+  left: 16px;
+  color: var(--tma-hint-color);
+  font-size: 16px;
+  font-weight: 500;
+}
+
+.tma-input-wrapper .tma-input {
+  padding-left: 32px;
+}
+
+/* Select dropdown */
+.tma-select {
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 16px;
+  border: 2px solid var(--tma-border-color);
+  border-radius: 12px;
+  background: var(--tg-theme-bg-color, #ffffff);
+  color: var(--tg-theme-text-color, #1f2937);
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 20px;
+}
+
+.tma-select:focus {
+  border-color: var(--tma-accent-color);
+}
+
+/* Slider */
+.tma-slider {
+  width: 100%;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--tma-border-color);
+  outline: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.tma-slider::-webkit-slider-thumb {
+  appearance: none;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--tma-accent-color);
+  cursor: pointer;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+.tma-slider::-moz-range-thumb {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--tma-accent-color);
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
+}
+
+/* Error message */
+.tma-error-msg {
+  padding: 12px 16px;
+  background: var(--tma-error-bg);
+  color: var(--tma-error);
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* Back button */
+.tma-back-btn {
+  padding: 8px;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: var(--tg-theme-text-color, #1f2937);
+  cursor: pointer;
+  transition: background 0.15s ease;
+}
+
+.tma-back-btn:active {
+  background: var(--tma-secondary-bg);
+}
+
+/* Small spinner */
+.tma-spinner-small {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: #ffffff;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+/* ========================================
+   INTENTS LIST STYLES
+   ======================================== */
+
+/* Stats row */
+.tma-stat-row {
+  display: flex;
+  gap: 12px;
+}
+
+.tma-stat-item {
+  flex: 1;
+  text-align: center;
+  padding: 12px;
+  background: var(--tg-theme-bg-color, #ffffff);
+  border-radius: 12px;
+}
+
+.tma-stat-value {
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--tg-theme-text-color, #1f2937);
+}
+
+.tma-stat-label {
+  font-size: 12px;
+  color: var(--tma-hint-color);
+  margin-top: 2px;
+  display: block;
+}
+
+/* Tabs */
+.tma-tabs {
+  display: flex;
+  gap: 8px;
+  padding: 4px;
+  background: var(--tma-secondary-bg);
+  border-radius: 12px;
+}
+
+.tma-tab {
+  flex: 1;
+  padding: 10px 16px;
+  font-size: 14px;
+  font-weight: 500;
+  border: none;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--tma-hint-color);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tma-tab.active {
+  background: var(--tg-theme-bg-color, #ffffff);
+  color: var(--tg-theme-text-color, #1f2937);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Intent card */
+.tma-intent-card {
+  background: var(--tg-theme-bg-color, #ffffff);
+  border-radius: 14px;
+  padding: 16px;
+  margin-bottom: 12px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* List container */
+.tma-list {
+  display: flex;
+  flex-direction: column;
+}
+
+/* Empty state */
+.tma-empty-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 48px 24px;
+  text-align: center;
+  color: var(--tg-theme-text-color, #1f2937);
+}
+
+.tma-empty-state .tma-empty-icon {
+  width: 80px;
+  height: 80px;
+  margin-bottom: 16px;
+  background: var(--tma-secondary-bg);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--tma-hint-color);
+}
+
+/* Icon button */
+.tma-icon-btn {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 10px;
+  border: none;
+  background: var(--tma-secondary-bg);
+  color: var(--tg-theme-text-color, #1f2937);
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tma-icon-btn:active {
+  transform: scale(0.95);
+}
+
+.tma-icon-btn.tma-primary {
+  background: var(--tma-accent-color);
+  color: #ffffff;
+}
+
+/* Small button */
+.tma-btn-small {
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 600;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.tma-btn-small:active {
+  transform: scale(0.95);
+}
+
+.tma-btn-small.tma-btn-danger {
+  background: var(--tma-error-bg);
+  color: var(--tma-error);
+}
+
+.tma-btn-small.tma-btn-danger:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Floating action button */
+.tma-fab {
+  position: fixed;
+  bottom: calc(24px + env(safe-area-inset-bottom, 0px));
+  right: 24px;
+  width: 56px;
+  height: 56px;
+  border-radius: 16px;
+  background: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+  color: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.4);
+  text-decoration: none;
+  transition: all 0.15s ease;
+}
+
+.tma-fab:active {
+  transform: scale(0.95);
+}
+
+/* Secondary button */
+.tma-btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 14px 24px;
+  font-size: 16px;
+  font-weight: 600;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  background: var(--tma-secondary-bg);
+  color: var(--tg-theme-text-color, #1f2937);
+}
+
+.tma-btn-secondary:active {
+  transform: scale(0.98);
+}
+
+.tma-btn-secondary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
