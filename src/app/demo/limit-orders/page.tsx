@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Transaction } from '@mysten/sui/transactions';
 import { useCurrentAccount, useSignAndExecuteTransaction, useSuiClient } from '@mysten/dapp-kit';
 import Link from 'next/link';
+import { useNetwork, useNetworkConfig } from '@/contexts/NetworkContext';
+import { NetworkToggle } from '@/components/NetworkToggle';
 import {
   getConfig, getAvailablePoolKeys, getPoolInfo,
   createBalanceManager, generateTradeProofAsOwner,
@@ -12,12 +14,8 @@ import {
   OrderType, SelfMatchingOption, type NetworkEnv,
 } from '@/lib/deepbook-v3';
 
-// Use testnet
-const CURRENT_ENV: NetworkEnv = 'testnet';
+// Use network context instead of hardcoded
 const DEMO_MODE = false;
-
-// Pool configurations
-const config = getConfig(CURRENT_ENV);
 
 interface LimitOrder {
   id: string;
@@ -34,6 +32,13 @@ interface LimitOrder {
 }
 
 export default function LimitOrdersPage() {
+  // Network context for dynamic mainnet/testnet
+  const { network, isMainnet } = useNetwork();
+  const { strictBalanceCheck } = useNetworkConfig();
+  
+  // Config based on current network
+  const config = useMemo(() => getConfig(network), [network]);
+  
   const [logs, setLogs] = useState<string[]>([]);
   const [orders, setOrders] = useState<LimitOrder[]>([]);
   const [selectedPair, setSelectedPair] = useState<string>('DEEP_SUI');
@@ -105,19 +110,25 @@ export default function LimitOrdersPage() {
     return newPrices;
   }, [suiClient]);
 
-  // Initialize
+  // Initialize and reset on network change
   useEffect(() => {
     addLog('Limit Orders page initialized');
-    addLog(`Network: ${CURRENT_ENV}`);
+    addLog(`Network: ${network.toUpperCase()}`);
     addLog(`DeepBook Package: ${config.packageId.slice(0, 20)}...`);
     
+    if (isMainnet) {
+      addLog('[WARN] Mainnet mode - real funds will be used!');
+    }
+    
     // Load saved balance manager from localStorage
-    const savedBm = localStorage.getItem(`balance_manager_${account?.address}`);
+    const savedBm = localStorage.getItem(`balance_manager_${network}_${account?.address}`);
     if (savedBm) {
       setUserBalanceManagerId(savedBm);
       addLog(`[OK] Loaded Balance Manager: ${savedBm.slice(0, 20)}...`);
+    } else {
+      setUserBalanceManagerId(null);
     }
-  }, [addLog, account?.address]);
+  }, [addLog, account?.address, network, config.packageId, isMainnet]);
 
   // Clear Balance Manager
   const handleClearBalanceManager = useCallback(() => {
@@ -127,10 +138,10 @@ export default function LimitOrdersPage() {
     
     // Then clear localStorage if account is available
     if (account?.address) {
-      localStorage.removeItem(`balance_manager_${account.address}`);
+      localStorage.removeItem(`balance_manager_${network}_${account.address}`);
     }
     addLog('Balance Manager cleared');
-  }, [account?.address, addLog]);
+  }, [account?.address, addLog, network]);
 
   // Fetch Balance Manager balances
   const fetchBmBalances = useCallback(async () => {
@@ -193,7 +204,7 @@ export default function LimitOrdersPage() {
           const bmId = bmObjects.data[0].data?.objectId;
           if (bmId) {
             setUserBalanceManagerId(bmId);
-            localStorage.setItem(`balance_manager_${account.address}`, bmId);
+            localStorage.setItem(`balance_manager_${network}_${account.address}`, bmId);
             addLog(`[OK] Found owned Balance Manager: ${bmId.slice(0, 20)}...`);
           }
         } else {
@@ -335,7 +346,7 @@ export default function LimitOrdersPage() {
               
               if (bmId) {
                 setUserBalanceManagerId(bmId);
-                localStorage.setItem(`balance_manager_${account.address}`, bmId);
+                localStorage.setItem(`balance_manager_${network}_${account.address}`, bmId);
                 addLog(`[OK] Balance Manager ID: ${bmId}`);
               } else {
                 addLog('[WARN] Could not extract Balance Manager ID automatically');
@@ -361,7 +372,7 @@ export default function LimitOrdersPage() {
     if (!manualBmId || !account?.address) return;
     
     setUserBalanceManagerId(manualBmId);
-    localStorage.setItem(`balance_manager_${account.address}`, manualBmId);
+    localStorage.setItem(`balance_manager_${network}_${account.address}`, manualBmId);
     addLog(`[OK] Set Balance Manager: ${manualBmId.slice(0, 20)}...`);
     setManualBmId('');
   }, [manualBmId, account?.address, addLog]);
@@ -647,10 +658,22 @@ export default function LimitOrdersPage() {
             <h1 className="text-xl sm:text-2xl font-bold text-white mb-1">Limit Orders</h1>
             <p className="text-sm text-gray-400">DeepBook V3 on-chain limit orders</p>
           </div>
-          <Link href="/demo" className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm">
-            Back
-          </Link>
+          <div className="flex items-center gap-3">
+            <NetworkToggle compact />
+            <Link href="/demo" className="px-3 py-1.5 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm">
+              Back
+            </Link>
+          </div>
         </div>
+
+        {/* Mainnet Warning */}
+        {isMainnet && (
+          <div className="mb-6 p-4 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
+            <p className="text-yellow-400 text-sm font-medium">
+              Mainnet Mode - Real funds will be used for orders
+            </p>
+          </div>
+        )}
 
         {/* Balance Manager Section */}
         <div className="bg-gray-900/50 rounded-lg p-4 sm:p-5 border border-gray-800 mb-6">

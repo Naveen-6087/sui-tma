@@ -1,9 +1,11 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Transaction, coinWithBalance } from '@mysten/sui/transactions';
 import { useCurrentAccount, useSignAndExecuteTransaction, useSuiClient } from '@mysten/dapp-kit';
 import Link from 'next/link';
+import { useNetwork, useNetworkConfig } from '@/contexts/NetworkContext';
+import { NetworkToggle } from '@/components/NetworkToggle';
 import {
   getConfig,
   getAvailablePoolKeys,
@@ -25,12 +27,8 @@ import {
   type DeepBookConfig,
 } from '@/lib/deepbook-v3';
 
-// Get network from environment
-const NETWORK: NetworkEnv = (process.env.NEXT_PUBLIC_SUI_NETWORK as NetworkEnv) || 'testnet';
-const CONFIG = getConfig(NETWORK);
-
-// LocalStorage key for storing margin manager IDs
-const MARGIN_MANAGERS_KEY = 'deepbook_margin_managers';
+// LocalStorage key for storing margin manager IDs (includes network)
+const getMarginManagersKey = (network: NetworkEnv) => `deepbook_margin_managers_${network}`;
 
 // Event type for margin manager creation
 const MARGIN_MANAGER_CREATED_EVENT = '0xb8620c24c9ea1a4a41e79613d2b3d1d93648d1bb6f6b789a7c8f261c94110e4b::margin_manager::MarginManagerCreatedEvent';
@@ -43,6 +41,13 @@ interface StoredMarginManager {
 }
 
 export default function MarginTradingPage() {
+  // Network context for dynamic mainnet/testnet
+  const { network, isMainnet } = useNetwork();
+  const { strictBalanceCheck } = useNetworkConfig();
+  
+  // Config based on current network
+  const CONFIG = useMemo(() => getConfig(network), [network]);
+  
   const account = useCurrentAccount();
   const suiClient = useSuiClient();
   const { mutate: signAndExecute, isPending } = useSignAndExecuteTransaction();
@@ -71,9 +76,22 @@ export default function MarginTradingPage() {
   }, []);
 
   // Get pools that support margin trading
-  const availablePools = getAvailablePoolKeys(CONFIG).filter(poolKey => 
-    isMarginTradingAvailable(CONFIG, poolKey)
-  );
+  const availablePools = useMemo(() => 
+    getAvailablePoolKeys(CONFIG).filter(poolKey => 
+      isMarginTradingAvailable(CONFIG, poolKey)
+    ), [CONFIG]);
+
+  // Reset on network change
+  useEffect(() => {
+    setLogs([]);
+    setLastTx(null);
+    setSelectedManager('');
+    setMarginManagers([]);
+    addLog(`Network: ${network.toUpperCase()}`);
+    if (isMainnet) {
+      addLog('[WARN] Mainnet - real funds and margin positions!');
+    }
+  }, [network, isMainnet, addLog]);
 
   // Set default pool
   useEffect(() => {
@@ -88,8 +106,8 @@ export default function MarginTradingPage() {
 
     const loadMarginManagers = async () => {
       try {
-        // Load from localStorage first
-        const stored = localStorage.getItem(MARGIN_MANAGERS_KEY);
+        // Load from localStorage first (network-specific key)
+        const stored = localStorage.getItem(getMarginManagersKey(network));
         let managers: StoredMarginManager[] = stored ? JSON.parse(stored) : [];
         
         // Filter to only this user's managers
@@ -132,8 +150,8 @@ export default function MarginTradingPage() {
           addLog('No margin managers found. Create one first.');
         }
         
-        // Save back to localStorage
-        localStorage.setItem(MARGIN_MANAGERS_KEY, JSON.stringify(managers));
+        // Save back to localStorage (network-specific)
+        localStorage.setItem(getMarginManagersKey(network), JSON.stringify(managers));
       } catch (error) {
         console.warn('Failed to load margin managers:', error);
         addLog('Failed to load margin managers');
@@ -141,13 +159,13 @@ export default function MarginTradingPage() {
     };
 
     loadMarginManagers();
-  }, [account?.address, suiClient, addLog, selectedManager]);
+  }, [account?.address, suiClient, addLog, selectedManager, network]);
 
   // Save margin manager to storage
   const saveMarginManager = useCallback((managerId: string, poolKey: string) => {
     if (!account?.address) return;
     
-    const stored = localStorage.getItem(MARGIN_MANAGERS_KEY);
+    const stored = localStorage.getItem(getMarginManagersKey(network));
     const managers: StoredMarginManager[] = stored ? JSON.parse(stored) : [];
     
     // Check if already exists
@@ -158,9 +176,9 @@ export default function MarginTradingPage() {
         createdAt: Date.now(),
         owner: account.address,
       });
-      localStorage.setItem(MARGIN_MANAGERS_KEY, JSON.stringify(managers));
+      localStorage.setItem(getMarginManagersKey(network), JSON.stringify(managers));
     }
-  }, [account?.address]);
+  }, [account?.address, network]);
 
   // Add manual manager ID
   const handleAddManualManager = useCallback(() => {
@@ -675,14 +693,17 @@ export default function MarginTradingPage() {
             </div>
             <p className="text-sm text-gray-400">DeepBook V3 Margin Trading with Leverage</p>
           </div>
-          <span className={`px-2.5 py-1 rounded-lg text-xs ${
-            NETWORK === 'mainnet'
-              ? 'bg-green-500/10 text-green-400 border border-green-500/20'
-              : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
-          }`}>
-            {NETWORK}
-          </span>
+          <NetworkToggle compact />
         </div>
+
+        {/* Mainnet Warning */}
+        {isMainnet && (
+          <div className="mb-5 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+            <p className="text-yellow-400 text-sm font-medium">
+              Mainnet Mode - Margin positions use real funds!
+            </p>
+          </div>
+        )}
 
         {/* Info Banner */}
         <div className="mb-5 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
@@ -949,7 +970,7 @@ export default function MarginTradingPage() {
             <p className="text-xs text-green-400">
               Last TX:{' '}
               <a
-                href={`https://suiscan.xyz/${NETWORK}/tx/${lastTx}`}
+                href={`https://suiscan.xyz/${network}/tx/${lastTx}`}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="underline hover:text-green-300"

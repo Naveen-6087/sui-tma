@@ -1,10 +1,12 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Transaction, coinWithBalance } from '@mysten/sui/transactions';
 import type { TransactionObjectArgument } from '@mysten/sui/transactions';
 import { useCurrentAccount, useSignAndExecuteTransaction, useSuiClient } from '@mysten/dapp-kit';
 import Link from 'next/link';
+import { useNetwork, useNetworkConfig } from '@/contexts/NetworkContext';
+import { NetworkToggle } from '@/components/NetworkToggle';
 import {
   getConfig,
   getAvailablePoolKeys,
@@ -23,10 +25,6 @@ import {
   type DeepBookConfig,
 } from '@/lib/deepbook-v3';
 
-// Get network from environment
-const NETWORK: NetworkEnv = (process.env.NEXT_PUBLIC_SUI_NETWORK as NetworkEnv) || 'testnet';
-const CONFIG = getConfig(NETWORK);
-
 interface ArbitrageOpportunity {
   id: string;
   borrowPool: string;
@@ -40,6 +38,13 @@ interface ArbitrageOpportunity {
 }
 
 export default function FlashArbitragePage() {
+  // Network context for dynamic mainnet/testnet
+  const { network, isMainnet } = useNetwork();
+  const { strictBalanceCheck, allowZeroMinOutput } = useNetworkConfig();
+  
+  // Config based on current network
+  const CONFIG = useMemo(() => getConfig(network), [network]);
+  
   const account = useCurrentAccount();
   const suiClient = useSuiClient();
   const { mutate: signAndExecute, isPending } = useSignAndExecuteTransaction();
@@ -57,7 +62,21 @@ export default function FlashArbitragePage() {
     setLogs(prev => [...prev.slice(-14), `[${new Date().toLocaleTimeString()}] ${message}`]);
   }, []);
 
-  const availablePools = getAvailablePoolKeys(CONFIG);
+  const availablePools = useMemo(() => getAvailablePoolKeys(CONFIG), [CONFIG]);
+
+  // Reset on network change
+  useEffect(() => {
+    setLogs([]);
+    setLastTx(null);
+    setSelectedBorrowPool('');
+    setSelectedSwapPool('');
+    setOpportunities([]);
+    addLog(`Network: ${network.toUpperCase()}`);
+    if (isMainnet) {
+      addLog('[WARN] Mainnet mode - flash loans use real funds!');
+      addLog('[WARN] Ensure profitable arbitrage before execution');
+    }
+  }, [network, isMainnet, addLog]);
 
   // Set default pools
   useEffect(() => {
@@ -260,7 +279,7 @@ export default function FlashArbitragePage() {
         { transaction: tx as any },
         {
           onSuccess: (result) => {
-            const explorerUrl = getExplorerUrl(NETWORK, result.digest);
+            const explorerUrl = getExplorerUrl(network, result.digest);
             addLog(`[OK] Flash loan TX successful!`);
             addLog(`Explorer: ${explorerUrl}`);
             addLog(`Note: This was a demo - borrowed and returned same amount`);
@@ -356,7 +375,7 @@ export default function FlashArbitragePage() {
         { transaction: tx as any },
         {
           onSuccess: (result) => {
-            const explorerUrl = getExplorerUrl(NETWORK, result.digest);
+            const explorerUrl = getExplorerUrl(network, result.digest);
             addLog(`[OK] Transaction submitted!`);
             addLog(`Explorer: ${explorerUrl}`);
             setLastTx(result.digest);
@@ -390,14 +409,20 @@ export default function FlashArbitragePage() {
             </div>
             <p className="text-sm text-gray-400">Atomic arbitrage using DeepBook V3 flash loans</p>
           </div>
-          <span className={`px-2.5 py-1 rounded-lg text-xs ${
-            NETWORK === 'mainnet'
-              ? 'bg-green-500/10 text-green-400 border border-green-500/20'
-              : 'bg-yellow-500/10 text-yellow-400 border border-yellow-500/20'
-          }`}>
-            {NETWORK}
-          </span>
+          <NetworkToggle compact />
         </div>
+
+        {/* Mainnet Warning */}
+        {isMainnet && (
+          <div className="mb-5 p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
+            <p className="text-yellow-400 text-sm font-medium">
+              Mainnet Mode - Flash loans use real pool liquidity!
+            </p>
+            <p className="text-yellow-300/70 text-xs mt-1">
+              Ensure profitable arbitrage opportunity before execution
+            </p>
+          </div>
+        )}
 
         {/* Info Banner */}
         <div className="mb-5 p-3 bg-blue-500/10 border border-blue-500/20 rounded-lg">
@@ -558,7 +583,7 @@ export default function FlashArbitragePage() {
           <div className="p-3 bg-green-500/10 border border-green-500/20 rounded-lg mb-5">
             <p className="text-xs text-green-400">
               Last TX: <a
-                href={getExplorerUrl(NETWORK, lastTx)}
+                href={getExplorerUrl(network, lastTx)}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="underline hover:text-green-300"
