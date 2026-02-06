@@ -2,6 +2,8 @@ import type { PropsWithChildren } from "react";
 import type { Metadata } from "next";
 
 import { Root } from "@/components/Root/Root";
+import { Navigation } from "@/components/Navigation";
+import { DappKitProvider } from "@/components/DappKitProvider";
 
 import "normalize.css/normalize.css";
 import "./globals.css";
@@ -23,10 +25,13 @@ export default async function RootLayout({ children }: PropsWithChildren) {
           enableSystem
           disableTransitionOnChange
         >
-          <Root>{children}</Root>
-          <div className="fixed bottom-4 right-4">
-            <ModeToggle />
-          </div>
+          <DappKitProvider>
+            <Navigation />
+            <Root>{children}</Root>
+            <div className="fixed bottom-4 right-4">
+              <ModeToggle />
+            </div>
+          </DappKitProvider>
         </ThemeProvider>
       </body>
     </html>

@@ -1,150 +1,136 @@
 "use client";
 
-import { Link } from "@/components/Link/Link";
-import { Page } from "@/components/Page";
-import { useAuth } from "@/contexts/AuthContext";
-import { formatAddress } from "@/lib/sui";
+import Link from "next/link";
 import { Button } from "@/components/ui/button";
 import {
   ShieldCheck,
   Zap,
   Lock,
-  LogIn,
-  Wallet,
   ArrowRight,
+  BarChart3,
+  TrendingUp,
 } from "lucide-react";
 import Image from "next/image";
 
 export default function Home() {
-  const { isAuthenticated, session, balance } = useAuth();
-
   return (
-    <Page>
-      <div className="bg-background text-foreground min-h-screen">
-        <div className="mx-auto max-w-md px-4 pb-6 flex flex-col gap-4">
-          {/* Header */}
-          <div className="flex items-center gap-3 pt-4 justify-center">
-            <div className="w-12 h-12 bg-card flex items-center justify-center rounded-xl">
+    <div className="bg-background text-foreground min-h-screen">
+      <div className="mx-auto max-w-4xl px-4 py-12">
+        {/* Header */}
+        <div className="text-center mb-12">
+          <div className="flex items-center justify-center gap-3 mb-6">
+            <div className="w-16 h-16 bg-card flex items-center justify-center rounded-xl">
               <Image
                 src="/logo-tma.png"
                 alt="SuiTrader Logo"
-                width={48}
-                height={48}
+                width={64}
+                height={64}
               />
             </div>
+          </div>
 
-            <div>
-              <p className="text-lg font-semibold">SuiTrader</p>
-              <p className="text-xs text-muted-foreground">
-                Private intent trading
+          <h1 className="text-4xl font-bold mb-4">SuiTrader</h1>
+          <p className="text-xl text-muted-foreground mb-8">
+            Private intent-based trading on Sui
+          </p>
+        </div>
+
+        {/* Features */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+          <div className="rounded-2xl bg-card p-6 text-center">
+            <ShieldCheck className="w-12 h-12 mx-auto mb-4 text-primary" />
+            <h3 className="text-lg font-semibold mb-2">Private</h3>
+            <p className="text-muted-foreground">
+              Encrypted trade intents ensure your strategies remain confidential
+            </p>
+          </div>
+
+          <div className="rounded-2xl bg-card p-6 text-center">
+            <Zap className="w-12 h-12 mx-auto mb-4 text-primary" />
+            <h3 className="text-lg font-semibold mb-2">Fast</h3>
+            <p className="text-muted-foreground">
+              Lightning-fast execution through automated trading systems
+            </p>
+          </div>
+
+          <div className="rounded-2xl bg-card p-6 text-center">
+            <Lock className="w-12 h-12 mx-auto mb-4 text-primary" />
+            <h3 className="text-lg font-semibold mb-2">Secure</h3>
+            <p className="text-muted-foreground">
+              Built on Sui blockchain with advanced security measures
+            </p>
+          </div>
+        </div>
+
+        {/* CTA Buttons */}
+        <div className="flex flex-col sm:flex-row gap-4 justify-center mb-12">
+          <Link href="/trade">
+            <Button
+              size="lg"
+              className="w-full sm:w-auto flex items-center gap-2"
+            >
+              <TrendingUp className="w-5 h-5" />
+              Start Trading
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </Link>
+
+          <Link href="/indexer">
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full sm:w-auto flex items-center gap-2"
+            >
+              <BarChart3 className="w-5 h-5" />
+              View Indexer
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </Link>
+        </div>
+
+        {/* How it works */}
+        <div className="rounded-2xl bg-card p-8">
+          <h2 className="text-2xl font-semibold mb-6 text-center">
+            How it works
+          </h2>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="text-center">
+              <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-lg font-bold mx-auto mb-4">
+                1
+              </div>
+              <h3 className="text-lg font-semibold mb-2">Create Intent</h3>
+              <p className="text-muted-foreground">
+                Define your trading strategy with encrypted intent rules
+              </p>
+            </div>
+
+            <div className="text-center">
+              <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-lg font-bold mx-auto mb-4">
+                2
+              </div>
+              <h3 className="text-lg font-semibold mb-2">Submit to Network</h3>
+              <p className="text-muted-foreground">
+                Your intent is securely submitted to the Sui network
+              </p>
+            </div>
+
+            <div className="text-center">
+              <div className="w-12 h-12 rounded-full bg-primary text-primary-foreground flex items-center justify-center text-lg font-bold mx-auto mb-4">
+                3
+              </div>
+              <h3 className="text-lg font-semibold mb-2">Auto Execution</h3>
+              <p className="text-muted-foreground">
+                Nautilus TEE handles execution when conditions are met
               </p>
             </div>
           </div>
-
-          {/* Welcome */}
-          {isAuthenticated && session && (
-            <div className="rounded-lg bg-card px-4 py-2 text-sm">
-              Welcome back!
-            </div>
-          )}
-
-          {/* Authenticated */}
-          {isAuthenticated && session ? (
-            <>
-              {/* Balance */}
-              <div className="rounded-2xl bg-card p-4">
-                <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                  <Wallet className="w-4 h-4" />
-                  Balance
-                </div>
-
-                <p className="text-2xl font-semibold mt-1">{balance} SUI</p>
-
-                <p className="text-xs mt-2 text-muted-foreground">
-                  {formatAddress(session.zkLoginAddress, 4)}
-                </p>
-              </div>
-
-              <Link href="/dashboard">
-                <Button className="w-full h-12 flex items-center gap-2">
-                  Open Dashboard
-                  <ArrowRight className="w-4 h-4" />
-                </Button>
-              </Link>
-            </>
-          ) : (
-            <>
-              {/* Features */}
-              <div className="grid grid-cols-3 gap-3">
-                <Feature icon={ShieldCheck} label="Private" />
-                <Feature icon={Zap} label="Fast" />
-                <Feature icon={Lock} label="Secure" />
-              </div>
-
-              <Link href="/login">
-                <Button className="w-full h-12 flex items-center gap-2">
-                  <LogIn className="w-4 h-4" />
-                  Get Started
-                </Button>
-              </Link>
-            </>
-          )}
-
-          {/* How it works */}
-          <div className="rounded-2xl bg-card p-4">
-            <p className="text-sm font-semibold mb-3 text-center">
-              How it works
-            </p>
-
-            <div className="flex flex-col gap-3">
-              <Step n="1" title="zkLogin" desc="Sign in with Google" />
-              <Step
-                n="2"
-                title="Private Intents"
-                desc="Encrypted trade rules"
-              />
-              <Step
-                n="3"
-                title="Auto Execution"
-                desc="Handled by Nautilus TEE"
-              />
-            </div>
-          </div>
-
-          {/* Footer */}
-          <p className="text-[11px] text-center text-muted-foreground mt-auto">
-            Built on Sui • zkLogin • Nautilus
-          </p>
         </div>
-      </div>
-    </Page>
-  );
-}
 
-function Feature({
-  icon: Icon,
-  label,
-}: {
-  icon: React.ElementType;
-  label: string;
-}) {
-  return (
-    <div className="rounded-xl bg-card p-3 flex flex-col items-center justify-center gap-1">
-      <Icon className="w-5 h-5" />
-      <span className="text-xs font-medium">{label}</span>
-    </div>
-  );
-}
-
-function Step({ n, title, desc }: { n: string; title: string; desc: string }) {
-  return (
-    <div className="flex items-center gap-3">
-      <div className="w-6 h-6 rounded-full bg-muted flex items-center justify-center text-xs font-medium">
-        {n}
-      </div>
-      <div>
-        <p className="text-sm font-medium">{title}</p>
-        <p className="text-xs text-muted-foreground">{desc}</p>
+        {/* Footer */}
+        <p className="text-center text-muted-foreground mt-12">
+          Built on Sui • Advanced Trading Technology
+        </p>
       </div>
     </div>
   );
