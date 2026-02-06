@@ -10,10 +10,11 @@ import {
 import { SuiGrpcClient } from "@mysten/sui/grpc";
 import { jwtDecode } from "jwt-decode";
 import { Transaction } from "@mysten/sui/transactions";
+import { fromBase64 } from "@mysten/sui/utils";
 
 // Configuration
 const SUI_RPC_URL =
-  process.env.NEXT_PUBLIC_SUI_RPC_URL || "https://fullnode.testnet.sui.io";
+  process.env.NEXT_PUBLIC_SUI_RPC_URL || "https://fullnode.testnet.sui.io:443";
 const PROVER_URL =
   process.env.NEXT_PUBLIC_PROVER_URL || "https://prover-dev.mystenlabs.com/v1";
 const GOOGLE_CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "";
@@ -247,6 +248,16 @@ export async function requestZkProof(
     keyClaimName: "sub",
   };
 
+  console.log("[Prover] Request payload:", {
+    extendedEphemeralPublicKeyPrefix: extendedEphemeralPublicKey
+      .toString()
+      .substring(0, 20),
+    maxEpoch: maxEpoch.toString(),
+    randomnessLength: randomness.length,
+    salt: userSalt,
+    keyClaimName: "sub",
+  });
+
   console.log("Requesting ZK proof...");
 
   try {
@@ -292,15 +303,40 @@ export async function signAndExecuteZkLoginTransaction(
     session.ephemeralPrivateKey,
   );
 
+  console.log("[zkLogin] Ephemeral key info:", {
+    secretKeyPrefix: session.ephemeralPrivateKey.substring(0, 15),
+    publicKeyBase64: ephemeralKeyPair.getPublicKey().toBase64(),
+    storedPublicKey: session.ephemeralPublicKey,
+    keysMatch:
+      ephemeralKeyPair.getPublicKey().toBase64() === session.ephemeralPublicKey,
+    extendedPublicKey: getExtendedEphemeralPublicKey(
+      ephemeralKeyPair.getPublicKey(),
+    )
+      .toString()
+      .substring(0, 20),
+  });
+
   // Set transaction sender
   txb.setSender(session.zkLoginAddress);
 
-  // Build transaction explicitly first (alternative pattern from docs)
-  const bytes = await txb.build({ client: suiClient });
+  // Set gas budget to avoid auto dry-run (which may fail with gRPC client)
+  txb.setGasBudget(10000000); // 0.01 SUI
 
-  // Sign the built transaction bytes with ephemeral key
-  const { signature: userSignature } =
-    await ephemeralKeyPair.signTransaction(bytes);
+  console.log("[zkLogin] About to sign transaction...", {
+    sender: session.zkLoginAddress,
+    gasBudget: 10000000,
+  });
+
+  // Sign transaction with ephemeral key (zkLogin canonical pattern)
+  const { bytes, signature: userSignature } = await txb.sign({
+    client: suiClient,
+    signer: ephemeralKeyPair,
+  });
+
+  console.log("[zkLogin] Transaction signed successfully", {
+    bytesLength: bytes.length,
+    userSignatureLength: userSignature.length,
+  });
 
   // Decode JWT to get claims
   const decodedJwt = decodeJwt(session.jwt);
@@ -313,9 +349,27 @@ export async function signAndExecuteZkLoginTransaction(
     decodedJwt.aud as string,
   ).toString();
 
+  console.log("[zkLogin] Address seed info:", {
+    userSalt: session.userSalt,
+    sub: decodedJwt.sub,
+    aud: decodedJwt.aud,
+    addressSeed: addressSeed.substring(0, 20) + "...",
+    maxEpoch: session.maxEpoch,
+    randomness: session.randomness,
+  });
+
   if (!session.zkProof) {
     throw new Error("ZK proof not found in session");
   }
+
+  console.log("[zkLogin] ZK Proof structure:", {
+    hasProofPoints: !!session.zkProof.proofPoints,
+    hasA: !!session.zkProof.proofPoints?.a,
+    hasB: !!session.zkProof.proofPoints?.b,
+    hasC: !!session.zkProof.proofPoints?.c,
+    hasIssBase64Details: !!session.zkProof.issBase64Details,
+    hasHeaderBase64: !!session.zkProof.headerBase64,
+  });
 
   // Create zkLogin signature
   const zkLoginSignature = getZkLoginSignature({
@@ -327,17 +381,31 @@ export async function signAndExecuteZkLoginTransaction(
     userSignature,
   });
 
-  // Execute transaction with zkLogin signature
-  const result = await suiClient.executeTransaction({
-    transaction: bytes,
-    signatures: [zkLoginSignature],
-    // options: {
-    //   showEffects: true,
-    //   showObjectChanges: true,
-    // },
+  console.log("[zkLogin] zkLogin signature created:", {
+    signatureLength: zkLoginSignature.length,
+    signaturePrefix: zkLoginSignature.substring(0, 20),
   });
 
-  return result;
+  // Execute transaction with zkLogin signature
+  // Convert base64 bytes to Uint8Array
+  const txBytes = fromBase64(bytes);
+
+  console.log("[zkLogin] Executing transaction with zkLogin signature...");
+
+  try {
+    // Use the documented simple pattern from zkLogin guide
+    const result = await suiClient.executeTransaction({
+      transaction: txBytes,
+      signatures: [zkLoginSignature],
+    });
+
+    console.log("[zkLogin] Transaction result:", result);
+
+    return result;
+  } catch (error) {
+    console.error("[zkLogin] Execute transaction error:", error);
+    throw error;
+  }
 }
 
 /**
@@ -383,6 +451,12 @@ export async function sendSui(
   session: ZkLoginSession,
   sendAll = false,
 ): Promise<any> {
+  // Validate epoch before attempting transaction
+  const isValid = await isSessionEpochValid(session);
+  if (!isValid) {
+    throw new Error("Session epoch has expired. Please login again.");
+  }
+
   // Convert SUI to MIST (1 SUI = 1_000_000_000 MIST)
   const amountInMist = BigInt(Math.floor(amountInSui * 1_000_000_000));
 
@@ -475,6 +549,7 @@ export function getZkLoginSession(): ZkLoginSession | null {
  */
 export function clearZkLoginSession(): void {
   if (typeof window !== "undefined") {
+    localStorage.removeItem(SESSION_KEY); // Clear the actual session
     sessionStorage.removeItem("zklogin_active");
     sessionStorage.removeItem(SETUP_KEY);
   }

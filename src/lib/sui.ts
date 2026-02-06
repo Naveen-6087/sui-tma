@@ -1,6 +1,7 @@
 import { SuiGrpcClient } from "@mysten/sui/grpc";
 
-const SUI_RPC_URL = process.env.NEXT_PUBLIC_SUI_RPC_URL || "https://fullnode.testnet.sui.io";
+const SUI_RPC_URL =
+  process.env.NEXT_PUBLIC_SUI_RPC_URL || "https://fullnode.testnet.sui.io:443";
 
 /**
  * Sui client singleton
@@ -9,7 +10,7 @@ let suiClientInstance: SuiGrpcClient | null = null;
 
 export function getSuiClient(): SuiGrpcClient {
   if (!suiClientInstance) {
-    suiClientInstance = new SuiGrpcClient({ 
+    suiClientInstance = new SuiGrpcClient({
       baseUrl: SUI_RPC_URL,
       network: "testnet",
     });
@@ -22,7 +23,7 @@ export function getSuiClient(): SuiGrpcClient {
  */
 export async function getBalance(address: string): Promise<bigint> {
   const client = getSuiClient();
-  const balanceResponse = await client.core.getBalance({ 
+  const balanceResponse = await client.core.getBalance({
     owner: address,
     coinType: "0x2::sui::SUI",
   });
@@ -54,9 +55,9 @@ export function formatSui(mist: bigint | string | number): string {
   const sui = Number(mistBigInt) / 1_000_000_000;
   if (sui === 0) return "0";
   if (sui < 0.0001) return "<0.0001";
-  return sui.toLocaleString(undefined, { 
+  return sui.toLocaleString(undefined, {
     minimumFractionDigits: 0,
-    maximumFractionDigits: 4 
+    maximumFractionDigits: 4,
   });
 }
 
@@ -96,7 +97,7 @@ export type NetworkType = keyof typeof NETWORK_CONFIG;
 export function getExplorerUrl(
   type: "tx" | "address" | "object",
   id: string,
-  network: NetworkType = "testnet"
+  network: NetworkType = "testnet",
 ): string {
   const baseUrl = NETWORK_CONFIG[network].explorerUrl;
   switch (type) {
