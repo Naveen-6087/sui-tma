@@ -1,0 +1,8 @@
+[package]
+name = "seal_policy"
+edition = "2024.beta"
+
+[dependencies]
+
+[addresses]
+seal_policy = "0x0"

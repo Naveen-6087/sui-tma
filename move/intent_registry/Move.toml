@@ -1,0 +1,8 @@
+[package]
+name = "intent_registry"
+edition = "2024.beta"
+
+[dependencies]
+
+[addresses]
+intent_registry = "0x0"
