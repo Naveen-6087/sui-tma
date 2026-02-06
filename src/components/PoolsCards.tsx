@@ -289,7 +289,7 @@ export function PoolsCards({ network, filters }: PoolsTableProps) {
       ) : (
         <div className=" flex flex-col space-y-8">
           {filteredAndSortedData.map((market) => (
-            <PoolCard key={market.poolId} market={market} />
+            <PoolCard key={market.poolId} market={market} network={network} />
           ))}
         </div>
       )}

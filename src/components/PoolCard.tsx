@@ -50,13 +50,14 @@ function formatPriceChange(change: number): {
 
 interface PoolCardProps {
   market: CombinedMarketData;
+  network: "testnet" | "mainnet";
 }
 
-export function PoolCard({ market }: PoolCardProps) {
+export function PoolCard({ market, network }: PoolCardProps) {
   const priceChange = formatPriceChange(market.priceChange24h);
 
   return (
-    <Link href={`/indexer/${market.poolId}`}>
+    <Link href={`/indexer/${network}/${market.poolId}`}>
       <Card className="hover:shadow-lg transition-shadow duration-200 cursor-pointer border-border/50 hover:border-primary/20">
         <CardContent className="p-6">
           <div className="flex items-center justify-between">
