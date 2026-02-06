@@ -7,8 +7,7 @@
     "dev:https": "next dev --experimental-https",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "bot": "npx tsx src/lib/telegram-bot.ts"
+    "lint": "next lint"
   },
   "dependencies": {
     "@mysten/dapp-kit": "^0.14.0",
@@ -16,13 +15,9 @@
     "@mysten/sui": "^2.1.0",
     "@radix-ui/react-slot": "^1.2.4",
     "@tanstack/react-query": "^5.90.20",
-    "@telegram-apps/telegram-ui": "^2.1.13",
-    "@tma.js/sdk-react": "^3.0.11",
     "axios": "^1.13.4",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
-    "eruda": "^3.4.3",
-    "grammy": "^1.21.0",
     "jwt-decode": "^4.0.0",
     "lucide-react": "^0.563.0",
     "next": "16.0.7",

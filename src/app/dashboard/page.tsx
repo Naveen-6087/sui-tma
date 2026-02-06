@@ -2,7 +2,6 @@
 
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import { hapticFeedback } from "@tma.js/sdk-react";
 
 import { Page } from "@/components/Page";
 import { Link } from "@/components/Link/Link";
@@ -54,14 +53,11 @@ export default function DashboardPage() {
 
   const handleRefreshBalance = async () => {
     setIsRefreshing(true);
-    hapticFeedback.impactOccurred.ifAvailable("light");
     await refreshBalance();
     setIsRefreshing(false);
-    hapticFeedback.notificationOccurred.ifAvailable("success");
   };
 
   const handleLogout = (deleteEverything = false) => {
-    hapticFeedback.impactOccurred.ifAvailable("medium");
     logout(deleteEverything);
     router.replace("/");
   };
@@ -70,14 +66,12 @@ export default function DashboardPage() {
     if (!session?.zkLoginAddress) return;
     navigator.clipboard.writeText(session.zkLoginAddress);
     setCopied(true);
-    hapticFeedback.notificationOccurred.ifAvailable("success");
     setTimeout(() => setCopied(false), 2000);
   };
 
   const handleDeleteEverything = () => {
     if (deleteConfirmation !== "DELETE EVERYTHING") return;
     setIsDeleting(true);
-    hapticFeedback.impactOccurred.ifAvailable("heavy");
     setTimeout(() => handleLogout(true), 500);
   };
 
@@ -92,13 +86,11 @@ export default function DashboardPage() {
     // Validate recipient address
     if (!recipientAddress.trim()) {
       setSendError("Please enter recipient address");
-      hapticFeedback.notificationOccurred.ifAvailable("error");
       return;
     }
 
     if (!recipientAddress.match(/^0x[a-fA-F0-9]{64}$/)) {
       setSendError("Invalid Sui address format");
-      hapticFeedback.notificationOccurred.ifAvailable("error");
       return;
     }
 
@@ -107,20 +99,17 @@ export default function DashboardPage() {
       const amount = parseFloat(sendAmount);
       if (isNaN(amount) || amount <= 0) {
         setSendError("Please enter a valid amount");
-        hapticFeedback.notificationOccurred.ifAvailable("error");
         return;
       }
 
       if (amount > parseFloat(balance)) {
         setSendError("Insufficient balance");
-        hapticFeedback.notificationOccurred.ifAvailable("error");
         return;
       }
     }
 
     try {
       setIsSending(true);
-      hapticFeedback.impactOccurred.ifAvailable("medium");
 
       const result = await sendSui(
         recipientAddress,
@@ -135,7 +124,6 @@ export default function DashboardPage() {
           : `Successfully sent ${sendAmount} SUI!`,
       );
       setTxDigest(result.digest);
-      hapticFeedback.notificationOccurred.ifAvailable("success");
 
       // Clear inputs
       setRecipientAddress("");
@@ -148,7 +136,6 @@ export default function DashboardPage() {
       setSendError(
         error instanceof Error ? error.message : "Failed to send transaction",
       );
-      hapticFeedback.notificationOccurred.ifAvailable("error");
     } finally {
       setIsSending(false);
     }
@@ -156,7 +143,7 @@ export default function DashboardPage() {
 
   if (isLoading || !session) {
     return (
-      <Page back={false}>
+      <Page>
         <div className="flex h-[100dvh] items-center justify-center">
           <div className="h-6 w-6 animate-spin rounded-full border-2 border-muted-foreground border-t-transparent" />
         </div>
@@ -165,7 +152,7 @@ export default function DashboardPage() {
   }
 
   return (
-    <Page back={false}>
+    <Page>
       <div className="bg-background min-h-[100dvh] text-foreground">
         <div className="mx-auto max-w-md px-4 py-6 flex flex-col gap-4">
           {/* Balance */}
@@ -331,10 +318,6 @@ export default function DashboardPage() {
               label="Valid Until"
               value={`Epoch ${session.maxEpoch}`}
             />
-
-            {session.telegramUserId && (
-              <SessionRow label="Telegram ID" value={session.telegramUserId} />
-            )}
           </Card>
 
           {/* Logout */}

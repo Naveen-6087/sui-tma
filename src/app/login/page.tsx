@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { initData, useSignal, hapticFeedback } from "@tma.js/sdk-react";
 
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/contexts/AuthContext";
@@ -16,7 +15,6 @@ import Image from "next/image";
 export default function LoginPage() {
   const router = useRouter();
   const { isAuthenticated, isLoading: authLoading } = useAuth();
-  const initDataUser = useSignal(initData.user);
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -30,7 +28,6 @@ export default function LoginPage() {
   const handleGoogleLogin = useCallback(async () => {
     setLoading(true);
     setError(null);
-    hapticFeedback.impactOccurred.ifAvailable("light");
 
     try {
       const setup = await setupZkLogin();
@@ -43,18 +40,13 @@ export default function LoginPage() {
         nonce: setup.nonce,
       });
 
-      if (initDataUser?.id) {
-        sessionStorage.setItem("telegram_user_id", initDataUser.id.toString());
-      }
-
       const redirectUrl = `${window.location.origin}/auth/callback`;
       window.location.href = getGoogleAuthUrl(setup.nonce, redirectUrl);
     } catch {
       setError("Failed to start login");
       setLoading(false);
-      hapticFeedback.notificationOccurred.ifAvailable("error");
     }
-  }, [initDataUser]);
+  }, []);
 
   if (authLoading) {
     return (

@@ -12,7 +12,6 @@ import {
   decodeJwt,
   getZkLoginAddressFromJwt,
   generateUserSalt,
-  generateTelegramUserSalt,
   requestZkProof,
   ZkLoginSession,
 } from "@/lib/zklogin";
@@ -77,15 +76,11 @@ export default function AuthCallbackPage() {
           throw new Error("Session expired. Please try logging in again.");
         }
 
-        const telegramUserId = sessionStorage.getItem("telegram_user_id");
-
         updateStep("session", "complete");
         updateStep("address", "active");
 
         // Generate salt
-        const userSalt = telegramUserId
-          ? generateTelegramUserSalt(parseInt(telegramUserId), decodedJwt.sub)
-          : generateUserSalt(decodedJwt.sub);
+        const userSalt = generateUserSalt(decodedJwt.sub);
 
         // Get zkLogin address
         const zkLoginAddress = getZkLoginAddressFromJwt(jwt, userSalt);
@@ -120,7 +115,6 @@ export default function AuthCallbackPage() {
           userSalt,
           zkLoginAddress,
           zkProof,
-          telegramUserId: telegramUserId ? parseInt(telegramUserId) : undefined,
         };
 
         // Store session and update auth context
@@ -128,7 +122,6 @@ export default function AuthCallbackPage() {
 
         // Clean up
         clearZkLoginSetup();
-        sessionStorage.removeItem("telegram_user_id");
 
         updateStep("complete", "complete");
         setStatus("success");
@@ -151,7 +144,6 @@ export default function AuthCallbackPage() {
 
         // Clean up on error
         clearZkLoginSetup();
-        sessionStorage.removeItem("telegram_user_id");
       }
     };
 
@@ -212,7 +204,7 @@ export default function AuthCallbackPage() {
   };
 
   return (
-    <Page back={false}>
+    <Page>
       <div className="flex flex-col items-center justify-center min-h-screen bg-background text-foreground p-5">
         {/* Header */}
         <div className="text-center mb-8 max-w-sm w-full">

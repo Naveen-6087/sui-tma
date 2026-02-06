@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { PropsWithChildren } from 'react';
-import { DappKitProvider } from '@/components/DappKitProvider';
-import { ConnectButton, useCurrentAccount } from '@mysten/dapp-kit';
-import { useAuth } from '@/contexts/AuthContext';
-import Link from 'next/link';
+import { PropsWithChildren } from "react";
+import { DappKitProvider } from "@/components/DappKitProvider";
+import { ConnectButton, useCurrentAccount } from "@mysten/dapp-kit";
+import { useAuth } from "@/contexts/AuthContext";
+import Link from "next/link";
 
 function WalletStatus() {
   const { isAuthenticated, session } = useAuth();
@@ -17,13 +17,14 @@ function WalletStatus() {
         <div className="px-4 py-2 bg-sky-500/10 border border-sky-500/30 rounded-lg flex items-center gap-2">
           <div className="w-2 h-2 bg-sky-400 rounded-full" />
           <span className="text-sky-400 text-sm font-medium">zkLogin</span>
-          <span className="text-gray-400 text-sm font-mono">
-            {session.zkLoginAddress.slice(0, 6)}...{session.zkLoginAddress.slice(-4)}
+          <span className="text-muted-foreground text-sm font-mono">
+            {session.zkLoginAddress.slice(0, 6)}...
+            {session.zkLoginAddress.slice(-4)}
           </span>
         </div>
-        <Link 
-          href="/dashboard" 
-          className="px-3 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm text-gray-300 transition-colors"
+        <Link
+          href="/dashboard"
+          className="px-3 py-2 bg-secondary hover:bg-secondary/80 rounded-lg text-sm text-secondary-foreground transition-colors"
         >
           Dashboard
         </Link>
@@ -36,8 +37,8 @@ function WalletStatus() {
     return (
       <div className="flex items-center gap-3">
         <ConnectButton />
-        <Link 
-          href="/login" 
+        <Link
+          href="/login"
           className="px-3 py-2 bg-sky-500/10 hover:bg-sky-500/20 border border-sky-500/30 rounded-lg text-sm text-sky-400 transition-colors"
         >
           Use zkLogin
@@ -50,9 +51,9 @@ function WalletStatus() {
   return (
     <div className="flex items-center gap-3">
       <ConnectButton />
-      <span className="text-gray-600 text-sm">or</span>
-      <Link 
-        href="/login" 
+      <span className="text-muted-foreground text-sm">or</span>
+      <Link
+        href="/login"
         className="px-4 py-2 bg-sky-500 hover:bg-sky-400 rounded-lg text-sm text-white font-medium transition-colors"
       >
         Sign in with Google
@@ -61,16 +62,29 @@ function WalletStatus() {
   );
 }
 
-export default function DemoLayout({ children }: PropsWithChildren) {
+export default function TradeLayout({ children }: PropsWithChildren) {
   return (
     <DappKitProvider>
       {/* Fixed Header */}
-      <header className="fixed top-0 left-0 right-0 z-50 bg-black border-b border-gray-800">
+      <header className="fixed top-0 left-0 right-0 z-50 bg-card border-b border-border">
         <div className="w-full max-w-[1600px] mx-auto px-8 py-4 flex items-center justify-between">
-          <Link href="/demo" className="flex items-center gap-3 text-white font-semibold hover:text-sky-400 transition-colors">
-            <div className="w-9 h-9 bg-sky-500 rounded-lg flex items-center justify-center">
-              <svg className="w-5 h-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
+          <Link
+            href="/trade"
+            className="flex items-center gap-3 text-card-foreground font-semibold hover:text-accent-foreground transition-colors"
+          >
+            <div className="w-9 h-9 bg-primary rounded-lg flex items-center justify-center">
+              <svg
+                className="w-5 h-5 text-primary-foreground"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M13 10V3L4 14h7v7l9-11h-7z"
+                />
               </svg>
             </div>
             <span className="text-lg">SuiTrader</span>
@@ -79,9 +93,7 @@ export default function DemoLayout({ children }: PropsWithChildren) {
         </div>
       </header>
       {/* Content with top padding for fixed header */}
-      <main className="pt-20 min-h-screen bg-black">
-        {children}
-      </main>
+      <main className="pt-20 min-h-screen bg-background">{children}</main>
     </DappKitProvider>
   );
 }

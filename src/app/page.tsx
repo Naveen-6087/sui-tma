@@ -1,6 +1,5 @@
 "use client";
 
-import { initData, useSignal } from "@tma.js/sdk-react";
 import { Link } from "@/components/Link/Link";
 import { Page } from "@/components/Page";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,10 +17,9 @@ import Image from "next/image";
 
 export default function Home() {
   const { isAuthenticated, session, balance } = useAuth();
-  const initDataUser = useSignal(initData.user);
 
   return (
-    <Page back={false}>
+    <Page>
       <div className="bg-background text-foreground min-h-screen">
         <div className="mx-auto max-w-md px-4 pb-6 flex flex-col gap-4">
           {/* Header */}
@@ -44,10 +42,9 @@ export default function Home() {
           </div>
 
           {/* Welcome */}
-          {initDataUser && (
+          {isAuthenticated && session && (
             <div className="rounded-lg bg-card px-4 py-2 text-sm">
-              Welcome,{" "}
-              <span className="font-medium">{initDataUser.first_name}</span>
+              Welcome back!
             </div>
           )}
 

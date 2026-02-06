@@ -60,7 +60,6 @@ export interface ZkLoginSession {
   userSalt: string;
   zkLoginAddress: string;
   zkProof?: PartialZkLoginSignature;
-  telegramUserId?: number;
 }
 
 /**
@@ -168,26 +167,6 @@ export function generateUserSalt(sub: string): string {
   }
 
   // Convert to a valid salt (must be smaller than 2^128)
-  const maxSalt = BigInt(2) ** BigInt(128);
-  const salt = BigInt(Math.abs(hash)) % maxSalt;
-  return salt.toString();
-}
-
-/**
- * Generate salt that combines Telegram user ID with sub for determinism
- */
-export function generateTelegramUserSalt(
-  telegramUserId: number,
-  sub: string,
-): string {
-  const userComponent = getUserSaltComponent(sub);
-  const combined = `tg:${telegramUserId}:${sub}:${userComponent}`;
-  let hash = 0;
-  for (let i = 0; i < combined.length; i++) {
-    const char = combined.charCodeAt(i);
-    hash = (hash << 5) - hash + char;
-    hash = hash & hash;
-  }
   const maxSalt = BigInt(2) ** BigInt(128);
   const salt = BigInt(Math.abs(hash)) % maxSalt;
   return salt.toString();
