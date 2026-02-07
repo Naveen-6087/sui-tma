@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { Providers } from "@/components/Providers";
 
 import "./global.css";
-import { Navigation } from "@/components/Navigation";
+import { ConditionalNavigation } from "@/components/ConditionalNavigation";
 export const metadata: Metadata = {
   title: "SuiTrader - Private Intent Trading",
   description: "Private intent-based trading on Sui with zkLogin",
@@ -15,7 +15,7 @@ export default async function RootLayout({ children }: PropsWithChildren) {
     <html lang="en" suppressHydrationWarning>
       <body>
         <Providers>
-             <Navigation />
+          <ConditionalNavigation />
           <div className="app-root">{children}</div>
         </Providers>
       </body>

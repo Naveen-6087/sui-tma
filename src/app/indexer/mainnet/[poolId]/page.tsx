@@ -5,6 +5,7 @@ import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { useState } from "react";
 import { CandleChart } from "@/components/CandleChart";
+import { OrderUpdates } from "@/components/OrderUpdates";
 
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -460,6 +461,9 @@ export default function MainnetPoolDetailsPage() {
           </div>
         </CardContent>
       </Card>
+
+      {/* Order Updates */}
+      <OrderUpdates poolName={pool.poolName} network="mainnet" />
     </div>
   );
 }

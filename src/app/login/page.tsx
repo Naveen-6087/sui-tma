@@ -62,19 +62,19 @@ export default function LoginPage() {
 
   if (authLoading) {
     return (
-      <div className="w-full max-w-2xl mx-auto px-5 py-6 min-h-screen flex flex-col items-center justify-center">
-        <div className="w-10 h-10 border-2 border-border border-t-accent rounded-full animate-spin" />
+      <div className="w-full max-w-2xl mx-auto px-5 py-6 min-h-screen flex flex-col items-center justify-center bg-background">
+        <div className="w-10 h-10 border-2 border-border border-t-primary rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="w-full max-w-2xl mx-auto px-5 py-6 flex flex-col min-h-[90vh]">
+    <div className="w-full max-w-2xl mx-auto px-5 py-6 flex flex-col min-h-[90vh] bg-background">
       {/* Back Button */}
       <div className="pt-2 pb-2">
         <Link
           href="/"
-          className="text-gray-400 hover:text-white text-sm flex items-center gap-2 transition-colors"
+          className="text-muted-foreground hover:text-foreground text-sm flex items-center gap-2 transition-colors"
         >
           <svg
             className="w-4 h-4"
@@ -96,9 +96,9 @@ export default function LoginPage() {
       {/* Hero Section */}
       <div className="flex-1 flex flex-col items-center justify-center text-center pt-5">
         {/* Logo */}
-        <div className="w-18 h-18 rounded-4xl mb-6 flex items-center justify-center shrink-0 animate-float bg-linear-to-br from-blue-500 to-indigo-500 shadow-[0_8px_24px_rgba(99,102,241,0.3)]">
+        <div className="w-18 h-18 rounded-2xl mb-6 flex items-center justify-center shrink-0 bg-linear-to-br from-primary to-primary/70 shadow-lg">
           <svg
-            className="w-9 h-9 text-white"
+            className="w-9 h-9 text-primary-foreground"
             fill="none"
             viewBox="0 0 24 24"
             stroke="currentColor"
@@ -113,15 +113,17 @@ export default function LoginPage() {
         </div>
 
         {/* Title */}
-        <h1 className="text-[26px] font-bold mb-2">SuiTrader</h1>
-        <p className="text-muted text-[15px] mb-8">
+        <h1 className="text-[26px] font-bold mb-2 text-foreground">
+          SuiTrader
+        </h1>
+        <p className="text-muted-foreground text-[15px] mb-8">
           Private Intent Trading on Sui
         </p>
 
         {/* Features List */}
-        <div className="w-full max-w-[340px] mb-6 flex flex-col gap-0.5 bg-card rounded-2xl overflow-hidden">
+        <div className="w-full max-w-[340px] mb-6 flex flex-col gap-0.5 bg-card border border-border rounded-2xl overflow-hidden">
           <div className="flex items-center gap-3.5 p-3.5 bg-transparent first:border-t-0 border-t border-border">
-            <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-green-500/10 text-green-500">
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-green-600/10 text-green-600">
               <svg
                 className="w-[18px] h-[18px]"
                 fill="currentColor"
@@ -135,15 +137,17 @@ export default function LoginPage() {
               </svg>
             </div>
             <div className="text-left">
-              <p className="text-[15px] font-medium">No Private Keys</p>
-              <p className="text-muted text-[13px]">
+              <p className="text-[15px] font-medium text-foreground">
+                No Private Keys
+              </p>
+              <p className="text-muted-foreground text-[13px]">
                 Sign in with Google OAuth
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-3.5 p-3.5 bg-transparent border-t border-border">
-            <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-accent/10 text-accent">
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-primary/10 text-primary">
               <svg
                 className="w-[18px] h-[18px]"
                 fill="currentColor"
@@ -157,15 +161,17 @@ export default function LoginPage() {
               </svg>
             </div>
             <div className="text-left">
-              <p className="text-[15px] font-medium">Zero-Knowledge Proofs</p>
-              <p className="text-muted text-[13px]">
+              <p className="text-[15px] font-medium text-foreground">
+                Zero-Knowledge Proofs
+              </p>
+              <p className="text-muted-foreground text-[13px]">
                 Privacy-preserving authentication
               </p>
             </div>
           </div>
 
           <div className="flex items-center gap-3.5 p-3.5 bg-transparent border-t border-border">
-            <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-[rgba(147,51,234,0.15)] text-purple-500">
+            <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 bg-primary/15 text-primary">
               <svg
                 className="w-[18px] h-[18px]"
                 fill="currentColor"
@@ -175,8 +181,10 @@ export default function LoginPage() {
               </svg>
             </div>
             <div className="text-left">
-              <p className="text-[15px] font-medium">Private Trading</p>
-              <p className="text-muted text-[13px]">
+              <p className="text-[15px] font-medium text-foreground">
+                Private Trading
+              </p>
+              <p className="text-muted-foreground text-[13px]">
                 Encrypted intents on DeepBook
               </p>
             </div>
@@ -194,11 +202,11 @@ export default function LoginPage() {
         <button
           onClick={handleGoogleLogin}
           disabled={isLoading}
-          className="w-full max-w-[340px] flex items-center justify-center gap-3 px-6 py-4 bg-white border-none rounded-xl text-base font-semibold text-gray-800 cursor-pointer transition-all duration-150 hover:bg-gray-100 hover:-translate-y-px active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed"
+          className="w-full max-w-[340px] flex items-center justify-center gap-3 px-6 py-4 bg-primary text-primary-foreground border-none rounded-xl text-base font-semibold cursor-pointer transition-all duration-150 hover:bg-primary/90 hover:-translate-y-px active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed shadow-md"
         >
           {isLoading ? (
             <>
-              <div className="w-5 h-5 border-2 border-border border-t-accent rounded-full animate-spin" />
+              <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
               <span>Connecting...</span>
             </>
           ) : (
@@ -230,7 +238,7 @@ export default function LoginPage() {
 
       {/* Footer */}
       <div className="pt-6 pb-4 text-center">
-        <p className="text-muted text-xs">
+        <p className="text-muted-foreground text-xs">
           Secured by zkLogin on Sui Blockchain
         </p>
       </div>

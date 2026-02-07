@@ -1,14 +1,14 @@
 /**
  * DeepBook V3 Integration Library
- * 
+ *
  * This module provides integration with DeepBook V3 CLOB on Sui
  * for executing trades, flash loans, and market orders.
- * 
+ *
  * Uses real DeepBook SDK for production and testnet mock tokens (DBUSDC, DBUSDT)
  * for demonstration purposes.
  */
 
-import { Transaction } from '@mysten/sui/transactions';
+import { Transaction } from "@mysten/sui/transactions";
 import {
   DeepBookTradingClient,
   createDeepBookClient,
@@ -25,7 +25,7 @@ import {
   GAS_BUDGET,
   MAX_TIMESTAMP,
   type NetworkEnv,
-} from './deepbook-client';
+} from "./deepbook-client";
 
 // Re-export for convenience
 export {
@@ -42,9 +42,12 @@ export {
 // ============== Package IDs (for intent registry) ==============
 
 export const PACKAGE_IDS = {
-  intentRegistry: '0xe29fd9c9698d416c6f4327fe83e06dad7116302f6efabef96b94d9ab86442656',
-  sealPolicy: '0xdacdece21b4b19fe7b5631a9594056fc01132a11d5dc75498a4f4c4a641b9c37',
-  intentRegistryObject: '0x4a7e401d3cf98cb1e22b6443c5acff556ffc1e78dd5319dca8bdfc73edbc053c',
+  intentRegistry:
+    "0xe29fd9c9698d416c6f4327fe83e06dad7116302f6efabef96b94d9ab86442656",
+  sealPolicy:
+    "0xdacdece21b4b19fe7b5631a9594056fc01132a11d5dc75498a4f4c4a641b9c37",
+  intentRegistryObject:
+    "0x4a7e401d3cf98cb1e22b6443c5acff556ffc1e78dd5319dca8bdfc73edbc053c",
 };
 
 // ============== DeepBook V3 Contract Addresses ==============
@@ -54,36 +57,44 @@ export const DEEPBOOK_MAINNET = DEEPBOOK_CONFIG.mainnet;
 
 // ============== Current Environment ==============
 
-export const CURRENT_ENV: NetworkEnv = (process.env.NEXT_PUBLIC_SUI_NETWORK as NetworkEnv) || 'testnet';
+export const CURRENT_ENV: NetworkEnv =
+  (process.env.NEXT_PUBLIC_SUI_NETWORK as NetworkEnv) || "testnet";
 
 // ============== Coin Types ==============
 
 // Testnet DEEP token address
-const TESTNET_DEEP = '0x36dbef866a1d62bf7328989a10fb2f07d769f4ee587c0de4a0a256e57e0a58a8::deep::DEEP';
+const TESTNET_DEEP =
+  "0x36dbef866a1d62bf7328989a10fb2f07d769f4ee587c0de4a0a256e57e0a58a8::deep::DEEP";
 // Mainnet DEEP token address
-const MAINNET_DEEP = '0xdeeb7a4662eec9f2f3def03fb937a663dddaa2e215b8078a284d026b7946c270::deep::DEEP';
+const MAINNET_DEEP =
+  "0xdeeb7a4662eec9f2f3def03fb937a663dddaa2e215b8078a284d026b7946c270::deep::DEEP";
 
 export const COIN_TYPES = {
   // Core coins (both networks)
-  SUI: '0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI',
+  SUI: "0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI",
   // Use correct DEEP address based on network
-  DEEP: CURRENT_ENV === 'mainnet' ? MAINNET_DEEP : TESTNET_DEEP,
-  
+  DEEP: CURRENT_ENV === "mainnet" ? MAINNET_DEEP : TESTNET_DEEP,
+
   // Mainnet stablecoins
-  USDC: '0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC',
-  WUSDC: '0x5d4b302506645c37ff133b98c4b50a5ae14841659738d6d733d59d0d217a93bf::coin::COIN',
-  WUSDT: '0xc060006111016b8a020ad5b33834984a437aaa7d3c74c18e09a95d48aceab08c::coin::COIN',
-  
+  USDC: "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC",
+  WUSDC:
+    "0x5d4b302506645c37ff133b98c4b50a5ae14841659738d6d733d59d0d217a93bf::coin::COIN",
+  WUSDT:
+    "0xc060006111016b8a020ad5b33834984a437aaa7d3c74c18e09a95d48aceab08c::coin::COIN",
+
   // Testnet mock tokens (provided by DeepBook SDK)
-  DBUSDC: '0xf7152c05930480cd740d7311b5b8b45c6f488e3a53a11c3f74a6fac36a52e0d7::DBUSDC::DBUSDC',
-  DBUSDT: '0xf7152c05930480cd740d7311b5b8b45c6f488e3a53a11c3f74a6fac36a52e0d7::DBUSDT::DBUSDT',
-  
+  DBUSDC:
+    "0xf7152c05930480cd740d7311b5b8b45c6f488e3a53a11c3f74a6fac36a52e0d7::DBUSDC::DBUSDC",
+  DBUSDT:
+    "0xf7152c05930480cd740d7311b5b8b45c6f488e3a53a11c3f74a6fac36a52e0d7::DBUSDT::DBUSDT",
+
   // Mainnet tokens
-  BETH: '0xd0e89b2af5e4910726fbcd8b8dd37bb79b29e5f83f7491bca830e94f7f226d29::eth::ETH',
-  NS: '0x5145494a5f5100e645e4b0aa950fa6b68f614e8c59e17bc5ded3495123a79178::ns::NS',
-  TYPUS: '0xf82dc05634970553615eef6112a1ac4fb7bf10272bf6cbe0f80ef44a6c489385::typus::TYPUS',
-  WAL: '0x356a26eb9e012a68958082340d4c4116e7f55615cf27affcff209cf0ae544f59::wal::WAL',
-  xBTC: '0x876a4b7bce8aeaef60464c11f4026903e9afacab79b9b142686158aa86560b50::xbtc::XBTC',
+  BETH: "0xd0e89b2af5e4910726fbcd8b8dd37bb79b29e5f83f7491bca830e94f7f226d29::eth::ETH",
+  NS: "0x5145494a5f5100e645e4b0aa950fa6b68f614e8c59e17bc5ded3495123a79178::ns::NS",
+  TYPUS:
+    "0xf82dc05634970553615eef6112a1ac4fb7bf10272bf6cbe0f80ef44a6c489385::typus::TYPUS",
+  WAL: "0x356a26eb9e012a68958082340d4c4116e7f55615cf27affcff209cf0ae544f59::wal::WAL",
+  xBTC: "0x876a4b7bce8aeaef60464c11f4026903e9afacab79b9b142686158aa86560b50::xbtc::XBTC",
 };
 
 // ============== Decimals ==============
@@ -108,37 +119,41 @@ export const COIN_DECIMALS: Record<string, number> = {
 // Mainnet pools with real liquidity
 export const MAINNET_POOL_INFO = {
   DEEP_SUI: {
-    poolId: '0x9e69acc3f390cc83cc61e0a71c6b1ad0ceb2a116e1d51ba66a5c05a84a8a7e4c',
+    poolId:
+      "0x9e69acc3f390cc83cc61e0a71c6b1ad0ceb2a116e1d51ba66a5c05a84a8a7e4c",
     baseCoin: COIN_TYPES.DEEP,
     quoteCoin: COIN_TYPES.SUI,
     baseDecimals: 6,
     quoteDecimals: 9,
     tickSize: 1000000, // 0.001 in quote decimals
-    lotSize: 100000,   // 0.1 in base decimals
-    minSize: 1000000,  // 1 DEEP minimum
+    lotSize: 100000, // 0.1 in base decimals
+    minSize: 1000000, // 1 DEEP minimum
   },
   SUI_USDC: {
-    poolId: '0xe05dafb5133bcffb8d59f4e12465dc0e9faeaa05e3e342a08fe135800e3e4407',
+    poolId:
+      "0xe05dafb5133bcffb8d59f4e12465dc0e9faeaa05e3e342a08fe135800e3e4407",
     baseCoin: COIN_TYPES.SUI,
     quoteCoin: COIN_TYPES.USDC,
     baseDecimals: 9,
     quoteDecimals: 6,
-    tickSize: 1000,    // 0.001 USDC
-    lotSize: 1000000,  // 0.001 SUI
+    tickSize: 1000, // 0.001 USDC
+    lotSize: 1000000, // 0.001 SUI
     minSize: 100000000, // 0.1 SUI minimum
   },
   DEEP_USDC: {
-    poolId: '0x21dfe7a0c31fead3a7cdc41d16c89a37fcf66a01e5cf45e08a0dcb7c3e7f7d8b',
+    poolId:
+      "0x21dfe7a0c31fead3a7cdc41d16c89a37fcf66a01e5cf45e08a0dcb7c3e7f7d8b",
     baseCoin: COIN_TYPES.DEEP,
     quoteCoin: COIN_TYPES.USDC,
     baseDecimals: 6,
     quoteDecimals: 6,
-    tickSize: 100,     // 0.0001 USDC
-    lotSize: 100000,   // 0.1 DEEP
-    minSize: 1000000,  // 1 DEEP minimum
+    tickSize: 100, // 0.0001 USDC
+    lotSize: 100000, // 0.1 DEEP
+    minSize: 1000000, // 1 DEEP minimum
   },
   WAL_USDC: {
-    poolId: '0x2ebc38e8cbed7b2e3a0c2d3c5a0b6c47f8a8f9d7e6c5b4a3f2e1d0c9b8a7f6e5',
+    poolId:
+      "0x2ebc38e8cbed7b2e3a0c2d3c5a0b6c47f8a8f9d7e6c5b4a3f2e1d0c9b8a7f6e5",
     baseCoin: COIN_TYPES.WAL,
     quoteCoin: COIN_TYPES.USDC,
     baseDecimals: 9,
@@ -152,7 +167,8 @@ export const MAINNET_POOL_INFO = {
 // Testnet pools (using real DeepBook testnet pools from SDK)
 export const TESTNET_POOL_INFO = {
   SUI_DBUSDC: {
-    poolId: '0x1c19362ca52b8ffd7a33cee805a67d40f31e6ba303753fd3a4cfdfacea7163a5',
+    poolId:
+      "0x1c19362ca52b8ffd7a33cee805a67d40f31e6ba303753fd3a4cfdfacea7163a5",
     baseCoin: COIN_TYPES.SUI,
     quoteCoin: COIN_TYPES.DBUSDC,
     baseDecimals: 9,
@@ -162,7 +178,8 @@ export const TESTNET_POOL_INFO = {
     minSize: 10000000,
   },
   DEEP_DBUSDC: {
-    poolId: '0xe86b991f8632217505fd859445f9803967ac84a9d4a1219065bf191fcb74b622',
+    poolId:
+      "0xe86b991f8632217505fd859445f9803967ac84a9d4a1219065bf191fcb74b622",
     baseCoin: COIN_TYPES.DEEP,
     quoteCoin: COIN_TYPES.DBUSDC,
     baseDecimals: 6,
@@ -172,7 +189,8 @@ export const TESTNET_POOL_INFO = {
     minSize: 1000000,
   },
   DEEP_SUI: {
-    poolId: '0x48c95963e9eac37a316b7ae04a0deb761bcdcc2b67912374d6036e7f0e9bae9f',
+    poolId:
+      "0x48c95963e9eac37a316b7ae04a0deb761bcdcc2b67912374d6036e7f0e9bae9f",
     baseCoin: COIN_TYPES.DEEP,
     quoteCoin: COIN_TYPES.SUI,
     baseDecimals: 6,
@@ -184,7 +202,8 @@ export const TESTNET_POOL_INFO = {
 };
 
 // Unified pool access
-export const POOLS = CURRENT_ENV === 'mainnet' ? MAINNET_POOL_INFO : TESTNET_POOL_INFO;
+export const POOLS =
+  CURRENT_ENV === "mainnet" ? MAINNET_POOL_INFO : TESTNET_POOL_INFO;
 
 // ============== Types ==============
 
@@ -201,10 +220,10 @@ export interface PoolInfo {
 
 export interface OrderParams {
   poolId: string;
-  side: 'buy' | 'sell';
+  side: "buy" | "sell";
   price: number;
   quantity: number;
-  orderType: 'limit' | 'market' | 'ioc' | 'fok' | 'post_only';
+  orderType: "limit" | "market" | "ioc" | "fok" | "post_only";
   clientOrderId?: string;
 }
 
@@ -232,13 +251,13 @@ export interface BalanceManagerConfig {
 
 // ============== Demo/Simulation Mode ==============
 
-export const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === 'true';
+export const DEMO_MODE = process.env.NEXT_PUBLIC_DEMO_MODE === "true";
 
 // Real-time price sources (used as fallback)
 const PRICE_SOURCES = {
-  coingecko: 'https://api.coingecko.com/api/v3/simple/price',
-  deepbookTestnet: 'https://deepbook-indexer.testnet.sui.io',
-  deepbookMainnet: 'https://deepbook-indexer.mainnet.sui.io',
+  coingecko: "https://api.coingecko.com/api/v3/simple/price",
+  deepbookTestnet: "https://deepbook-indexer.testnet.sui.io",
+  deepbookMainnet: "https://deepbook-indexer.mainnet.sui.io",
 };
 
 // Mock prices for offline/demo mode
@@ -261,14 +280,14 @@ export const MOCK_ORDERBOOK = {
       { price: 1.83, quantity: 2500, total: 4575 },
       { price: 1.82, quantity: 5000, total: 9100 },
       { price: 1.81, quantity: 7500, total: 13575 },
-      { price: 1.80, quantity: 10000, total: 18000 },
+      { price: 1.8, quantity: 10000, total: 18000 },
     ],
     asks: [
       { price: 1.86, quantity: 800, total: 1488 },
       { price: 1.87, quantity: 1500, total: 2805 },
       { price: 1.88, quantity: 3000, total: 5640 },
       { price: 1.89, quantity: 4500, total: 8505 },
-      { price: 1.90, quantity: 6000, total: 11400 },
+      { price: 1.9, quantity: 6000, total: 11400 },
     ],
     spread: 0.02,
     midPrice: 1.85,
@@ -311,7 +330,7 @@ let globalClient: DeepBookTradingClient | null = null;
  * Get or create a DeepBook client instance
  */
 export function getDeepBookClient(address: string): DeepBookTradingClient {
-  if (!globalClient || globalClient['address'] !== address) {
+  if (!globalClient || globalClient["address"] !== address) {
     globalClient = createDeepBookClient(CURRENT_ENV, address);
   }
   return globalClient;
@@ -324,42 +343,43 @@ export function getDeepBookClient(address: string): DeepBookTradingClient {
  */
 export async function fetchPrice(pair: string): Promise<number> {
   // First try DeepBook indexer
-  const indexerUrl = CURRENT_ENV === 'mainnet' 
-    ? PRICE_SOURCES.deepbookMainnet 
-    : PRICE_SOURCES.deepbookTestnet;
-  
+  const indexerUrl =
+    CURRENT_ENV === "mainnet"
+      ? PRICE_SOURCES.deepbookMainnet
+      : PRICE_SOURCES.deepbookTestnet;
+
   const poolInfo = POOLS[pair as keyof typeof POOLS];
-  
-  if (poolInfo && poolInfo.poolId !== '0x0') {
+
+  if (poolInfo && poolInfo.poolId !== "0x0") {
     try {
       const response = await fetch(
         `${indexerUrl}/get_mid_price?pool_id=${poolInfo.poolId}`,
-        { signal: AbortSignal.timeout(3000) }
+        { signal: AbortSignal.timeout(3000) },
       );
-      
+
       if (response.ok) {
         const data = await response.json();
         const price = parseFloat(data.mid_price);
         if (price > 0) return price;
       }
     } catch (error) {
-      console.warn('DeepBook indexer unavailable for', pair);
+      console.warn("DeepBook indexer unavailable for", pair);
     }
   }
 
   // Fallback to CoinGecko for SUI price
-  if (pair.includes('SUI')) {
+  if (pair.includes("SUI")) {
     try {
       const response = await fetch(
         `${PRICE_SOURCES.coingecko}?ids=sui&vs_currencies=usd`,
-        { signal: AbortSignal.timeout(3000) }
+        { signal: AbortSignal.timeout(3000) },
       );
       const data = await response.json();
       if (data.sui?.usd) {
         return data.sui.usd;
       }
     } catch (error) {
-      console.warn('CoinGecko unavailable');
+      console.warn("CoinGecko unavailable");
     }
   }
 
@@ -377,15 +397,17 @@ export async function fetchPrice(pair: string): Promise<number> {
 /**
  * Fetch multiple prices at once
  */
-export async function fetchPrices(pairs: string[]): Promise<Record<string, number>> {
+export async function fetchPrices(
+  pairs: string[],
+): Promise<Record<string, number>> {
   const prices: Record<string, number> = {};
-  
+
   await Promise.all(
     pairs.map(async (pair) => {
       prices[pair] = await fetchPrice(pair);
-    })
+    }),
   );
-  
+
   return prices;
 }
 
@@ -393,17 +415,18 @@ export async function fetchPrices(pairs: string[]): Promise<Record<string, numbe
  * Fetch order book from DeepBook indexer
  */
 export async function fetchOrderBook(pair: string, depth: number = 10) {
-  const indexerUrl = CURRENT_ENV === 'mainnet'
-    ? PRICE_SOURCES.deepbookMainnet
-    : PRICE_SOURCES.deepbookTestnet;
+  const indexerUrl =
+    CURRENT_ENV === "mainnet"
+      ? PRICE_SOURCES.deepbookMainnet
+      : PRICE_SOURCES.deepbookTestnet;
 
   const poolInfo = POOLS[pair as keyof typeof POOLS];
 
-  if (poolInfo && poolInfo.poolId !== '0x0') {
+  if (poolInfo && poolInfo.poolId !== "0x0") {
     try {
       const response = await fetch(
         `${indexerUrl}/get_order_book?pool_id=${poolInfo.poolId}&depth=${depth}`,
-        { signal: AbortSignal.timeout(3000) }
+        { signal: AbortSignal.timeout(3000) },
       );
 
       if (response.ok) {
@@ -416,12 +439,15 @@ export async function fetchOrderBook(pair: string, depth: number = 10) {
         };
       }
     } catch (error) {
-      console.warn('Failed to fetch order book:', error);
+      console.warn("Failed to fetch order book:", error);
     }
   }
 
   // Return mock data as fallback
-  return MOCK_ORDERBOOK[pair as keyof typeof MOCK_ORDERBOOK] || MOCK_ORDERBOOK.SUI_USDC;
+  return (
+    MOCK_ORDERBOOK[pair as keyof typeof MOCK_ORDERBOOK] ||
+    MOCK_ORDERBOOK.SUI_USDC
+  );
 }
 
 // ============== PTB Builders ==============
@@ -432,17 +458,20 @@ export async function fetchOrderBook(pair: string, depth: number = 10) {
 export function buildSwapTx(
   params: SwapParams,
   senderAddress: string,
-  tx: Transaction = new Transaction()
+  tx: Transaction = new Transaction(),
 ): Transaction {
   const poolInfo = POOLS[params.poolKey as keyof typeof POOLS];
   if (!poolInfo) throw new Error(`Pool not found: ${params.poolKey}`);
 
   const client = getDeepBookClient(senderAddress);
-  const deepBookConfig = CURRENT_ENV === 'mainnet' ? DEEPBOOK_MAINNET : DEEPBOOK_TESTNET;
-  
+  const deepBookConfig =
+    CURRENT_ENV === "mainnet" ? DEEPBOOK_MAINNET : DEEPBOOK_TESTNET;
+
   // Determine if we're swapping base for quote or quote for base
   const isBaseToQuote = params.inputCoin === poolInfo.baseCoin;
-  const functionName = isBaseToQuote ? 'swap_exact_base_for_quote' : 'swap_exact_quote_for_base';
+  const functionName = isBaseToQuote
+    ? "swap_exact_base_for_quote"
+    : "swap_exact_quote_for_base";
 
   // For real swaps, we need to provide the coins
   // This builds the transaction structure - caller needs to provide coin objects
@@ -457,7 +486,7 @@ export function buildSwapTx(
       // Minimum output
       tx.pure.u64(params.minOutput),
       // Clock
-      tx.object('0x6'),
+      tx.object("0x6"),
     ],
   });
 
@@ -472,12 +501,13 @@ export async function buildCompleteSwapTx(
   senderAddress: string,
   inputCoinObjects: string[],
   deepCoinObjects: string[],
-  tx: Transaction = new Transaction()
+  tx: Transaction = new Transaction(),
 ): Promise<Transaction> {
   const poolInfo = POOLS[params.poolKey as keyof typeof POOLS];
   if (!poolInfo) throw new Error(`Pool not found: ${params.poolKey}`);
 
-  const deepBookConfig = CURRENT_ENV === 'mainnet' ? DEEPBOOK_MAINNET : DEEPBOOK_TESTNET;
+  const deepBookConfig =
+    CURRENT_ENV === "mainnet" ? DEEPBOOK_MAINNET : DEEPBOOK_TESTNET;
   const isBaseToQuote = params.inputCoin === poolInfo.baseCoin;
 
   // Merge input coins if multiple
@@ -487,11 +517,11 @@ export async function buildCompleteSwapTx(
   } else if (inputCoinObjects.length > 1) {
     tx.mergeCoins(
       tx.object(inputCoinObjects[0]),
-      inputCoinObjects.slice(1).map(id => tx.object(id))
+      inputCoinObjects.slice(1).map((id) => tx.object(id)),
     );
     inputCoin = tx.object(inputCoinObjects[0]);
   } else {
-    throw new Error('No input coins provided');
+    throw new Error("No input coins provided");
   }
 
   // Split exact amount needed
@@ -505,11 +535,13 @@ export async function buildCompleteSwapTx(
     } else {
       tx.mergeCoins(
         tx.object(deepCoinObjects[0]),
-        deepCoinObjects.slice(1).map(id => tx.object(id))
+        deepCoinObjects.slice(1).map((id) => tx.object(id)),
       );
       deepCoin = tx.object(deepCoinObjects[0]);
     }
-    const [splitDeep] = tx.splitCoins(deepCoin, [tx.pure.u64(params.deepAmount || BigInt(1000000))]);
+    const [splitDeep] = tx.splitCoins(deepCoin, [
+      tx.pure.u64(params.deepAmount || BigInt(1000000)),
+    ]);
     deepCoin = splitDeep;
   } else {
     // Create zero coin if no DEEP available
@@ -517,7 +549,9 @@ export async function buildCompleteSwapTx(
     deepCoin = zeroCoin;
   }
 
-  const functionName = isBaseToQuote ? 'swap_exact_base_for_quote' : 'swap_exact_quote_for_base';
+  const functionName = isBaseToQuote
+    ? "swap_exact_base_for_quote"
+    : "swap_exact_quote_for_base";
 
   const [baseOut, quoteOut, deepOut] = tx.moveCall({
     target: `${deepBookConfig.PACKAGE_ID}::pool::${functionName}`,
@@ -526,12 +560,15 @@ export async function buildCompleteSwapTx(
       splitCoin,
       deepCoin,
       tx.pure.u64(params.minOutput),
-      tx.object('0x6'),
+      tx.object("0x6"),
     ],
   });
 
   // Transfer outputs back to sender
-  tx.transferObjects([baseOut, quoteOut, deepOut], tx.pure.address(senderAddress));
+  tx.transferObjects(
+    [baseOut, quoteOut, deepOut],
+    tx.pure.address(senderAddress),
+  );
 
   return tx;
 }
@@ -541,20 +578,20 @@ export async function buildCompleteSwapTx(
  */
 export function buildFlashLoanBorrowTx(
   params: FlashLoanParams,
-  tx: Transaction = new Transaction()
+  tx: Transaction = new Transaction(),
 ): { tx: Transaction; coinResult: any; receiptResult: any } {
   const poolInfo = POOLS[params.poolKey as keyof typeof POOLS];
   if (!poolInfo) throw new Error(`Pool not found: ${params.poolKey}`);
 
-  const deepBookConfig = CURRENT_ENV === 'mainnet' ? DEEPBOOK_MAINNET : DEEPBOOK_TESTNET;
-  const functionName = params.borrowBase ? 'borrow_flashloan_base' : 'borrow_flashloan_quote';
+  const deepBookConfig =
+    CURRENT_ENV === "mainnet" ? DEEPBOOK_MAINNET : DEEPBOOK_TESTNET;
+  const functionName = params.borrowBase
+    ? "borrow_flashloan_base"
+    : "borrow_flashloan_quote";
 
   const [coinResult, receiptResult] = tx.moveCall({
     target: `${deepBookConfig.PACKAGE_ID}::pool::${functionName}`,
-    arguments: [
-      tx.object(poolInfo.poolId),
-      tx.pure.u64(params.amount),
-    ],
+    arguments: [tx.object(poolInfo.poolId), tx.pure.u64(params.amount)],
   });
 
   return { tx, coinResult, receiptResult };
@@ -568,21 +605,20 @@ export function buildFlashLoanRepayTx(
   coin: any,
   receipt: any,
   borrowBase: boolean,
-  tx: Transaction
+  tx: Transaction,
 ): Transaction {
   const poolInfo = POOLS[poolKey as keyof typeof POOLS];
   if (!poolInfo) throw new Error(`Pool not found: ${poolKey}`);
 
-  const deepBookConfig = CURRENT_ENV === 'mainnet' ? DEEPBOOK_MAINNET : DEEPBOOK_TESTNET;
-  const functionName = borrowBase ? 'return_flashloan_base' : 'return_flashloan_quote';
+  const deepBookConfig =
+    CURRENT_ENV === "mainnet" ? DEEPBOOK_MAINNET : DEEPBOOK_TESTNET;
+  const functionName = borrowBase
+    ? "return_flashloan_base"
+    : "return_flashloan_quote";
 
   tx.moveCall({
     target: `${deepBookConfig.PACKAGE_ID}::pool::${functionName}`,
-    arguments: [
-      tx.object(poolInfo.poolId),
-      coin,
-      receipt,
-    ],
+    arguments: [tx.object(poolInfo.poolId), coin, receipt],
   });
 
   return tx;
@@ -595,28 +631,35 @@ export function buildLimitOrderTx(
   params: OrderParams,
   balanceManagerId: string,
   tradeProofId: string,
-  tx: Transaction = new Transaction()
+  tx: Transaction = new Transaction(),
 ): Transaction {
-  const poolInfo = Object.entries(POOLS).find(([_, p]) => p.poolId === params.poolId)?.[1];
-  if (!poolInfo) throw new Error('Pool not found');
+  const poolInfo = Object.entries(POOLS).find(
+    ([_, p]) => p.poolId === params.poolId,
+  )?.[1];
+  if (!poolInfo) throw new Error("Pool not found");
 
-  const deepBookConfig = CURRENT_ENV === 'mainnet' ? DEEPBOOK_MAINNET : DEEPBOOK_TESTNET;
+  const deepBookConfig =
+    CURRENT_ENV === "mainnet" ? DEEPBOOK_MAINNET : DEEPBOOK_TESTNET;
 
   // Convert price to tick units
-  const priceInTicks = Math.floor(params.price * Math.pow(10, poolInfo.quoteDecimals) / poolInfo.tickSize);
-  
-  // Convert quantity to lot units
-  const quantityInLots = Math.floor(params.quantity * Math.pow(10, poolInfo.baseDecimals) / poolInfo.lotSize);
+  const priceInTicks = Math.floor(
+    (params.price * Math.pow(10, poolInfo.quoteDecimals)) / poolInfo.tickSize,
+  );
 
-  const isBid = params.side === 'buy';
-  
+  // Convert quantity to lot units
+  const quantityInLots = Math.floor(
+    (params.quantity * Math.pow(10, poolInfo.baseDecimals)) / poolInfo.lotSize,
+  );
+
+  const isBid = params.side === "buy";
+
   // Map order type
   const orderTypeMap: Record<string, number> = {
-    'limit': ORDER_TYPE.NO_RESTRICTION,
-    'ioc': ORDER_TYPE.IMMEDIATE_OR_CANCEL,
-    'fok': ORDER_TYPE.FILL_OR_KILL,
-    'post_only': ORDER_TYPE.POST_ONLY,
-    'market': ORDER_TYPE.IMMEDIATE_OR_CANCEL,
+    limit: ORDER_TYPE.NO_RESTRICTION,
+    ioc: ORDER_TYPE.IMMEDIATE_OR_CANCEL,
+    fok: ORDER_TYPE.FILL_OR_KILL,
+    post_only: ORDER_TYPE.POST_ONLY,
+    market: ORDER_TYPE.IMMEDIATE_OR_CANCEL,
   };
   const orderType = orderTypeMap[params.orderType] || ORDER_TYPE.NO_RESTRICTION;
 
@@ -634,7 +677,7 @@ export function buildLimitOrderTx(
       tx.pure.bool(isBid),
       tx.pure.bool(true), // pay with deep
       tx.pure.u64(Date.now() + 3600000), // expire in 1 hour
-      tx.object('0x6'), // Clock
+      tx.object("0x6"), // Clock
     ],
   });
 
@@ -648,18 +691,21 @@ export function buildMarketOrderTx(
   poolKey: string,
   balanceManagerId: string,
   tradeProofId: string,
-  side: 'buy' | 'sell',
+  side: "buy" | "sell",
   quantity: number,
   clientOrderId?: string,
-  tx: Transaction = new Transaction()
+  tx: Transaction = new Transaction(),
 ): Transaction {
   const poolInfo = POOLS[poolKey as keyof typeof POOLS];
   if (!poolInfo) throw new Error(`Pool not found: ${poolKey}`);
 
-  const deepBookConfig = CURRENT_ENV === 'mainnet' ? DEEPBOOK_MAINNET : DEEPBOOK_TESTNET;
+  const deepBookConfig =
+    CURRENT_ENV === "mainnet" ? DEEPBOOK_MAINNET : DEEPBOOK_TESTNET;
 
   // Convert quantity to base units
-  const quantityInUnits = BigInt(Math.floor(quantity * Math.pow(10, poolInfo.baseDecimals)));
+  const quantityInUnits = BigInt(
+    Math.floor(quantity * Math.pow(10, poolInfo.baseDecimals)),
+  );
 
   tx.moveCall({
     target: `${deepBookConfig.PACKAGE_ID}::pool::place_market_order`,
@@ -670,9 +716,9 @@ export function buildMarketOrderTx(
       tx.pure.u128(BigInt(clientOrderId || Date.now().toString())),
       tx.pure.u8(SELF_MATCHING_OPTION.CANCEL_TAKER),
       tx.pure.u64(quantityInUnits),
-      tx.pure.bool(side === 'buy'),
+      tx.pure.bool(side === "buy"),
       tx.pure.bool(true), // pay with deep
-      tx.object('0x6'), // Clock
+      tx.object("0x6"), // Clock
     ],
   });
 
@@ -687,12 +733,13 @@ export function buildCancelOrderTx(
   balanceManagerId: string,
   tradeProofId: string,
   orderId: bigint,
-  tx: Transaction = new Transaction()
+  tx: Transaction = new Transaction(),
 ): Transaction {
   const poolInfo = POOLS[poolKey as keyof typeof POOLS];
   if (!poolInfo) throw new Error(`Pool not found: ${poolKey}`);
 
-  const deepBookConfig = CURRENT_ENV === 'mainnet' ? DEEPBOOK_MAINNET : DEEPBOOK_TESTNET;
+  const deepBookConfig =
+    CURRENT_ENV === "mainnet" ? DEEPBOOK_MAINNET : DEEPBOOK_TESTNET;
 
   tx.moveCall({
     target: `${deepBookConfig.PACKAGE_ID}::pool::cancel_order`,
@@ -701,7 +748,7 @@ export function buildCancelOrderTx(
       tx.object(balanceManagerId),
       tx.object(tradeProofId),
       tx.pure.u128(orderId),
-      tx.object('0x6'), // Clock
+      tx.object("0x6"), // Clock
     ],
   });
 
@@ -714,14 +761,19 @@ export function buildCancelOrderTx(
  * Build a create balance manager transaction
  */
 export function buildCreateBalanceManagerTx(
-  tx: Transaction = new Transaction()
+  senderAddress: string,
+  tx: Transaction = new Transaction(),
 ): Transaction {
-  const deepBookConfig = CURRENT_ENV === 'mainnet' ? DEEPBOOK_MAINNET : DEEPBOOK_TESTNET;
+  const deepBookConfig =
+    CURRENT_ENV === "mainnet" ? DEEPBOOK_MAINNET : DEEPBOOK_TESTNET;
 
-  tx.moveCall({
+  const [balanceManager] = tx.moveCall({
     target: `${deepBookConfig.PACKAGE_ID}::balance_manager::new`,
     arguments: [],
   });
+
+  // Transfer the created balance manager to the sender
+  tx.transferObjects([balanceManager], senderAddress);
 
   return tx;
 }
@@ -731,14 +783,19 @@ export function buildCreateBalanceManagerTx(
  */
 export function buildMintTradeCapTx(
   balanceManagerId: string,
-  tx: Transaction = new Transaction()
+  senderAddress: string,
+  tx: Transaction = new Transaction(),
 ): Transaction {
-  const deepBookConfig = CURRENT_ENV === 'mainnet' ? DEEPBOOK_MAINNET : DEEPBOOK_TESTNET;
+  const deepBookConfig =
+    CURRENT_ENV === "mainnet" ? DEEPBOOK_MAINNET : DEEPBOOK_TESTNET;
 
   const [tradeCap] = tx.moveCall({
     target: `${deepBookConfig.PACKAGE_ID}::balance_manager::mint_trade_cap`,
     arguments: [tx.object(balanceManagerId)],
   });
+
+  // Transfer the created trade cap to the sender
+  tx.transferObjects([tradeCap], senderAddress);
 
   return tx;
 }
@@ -750,17 +807,15 @@ export function buildDepositToManagerTx(
   balanceManagerId: string,
   coinType: string,
   coinObject: any,
-  tx: Transaction = new Transaction()
+  tx: Transaction = new Transaction(),
 ): Transaction {
-  const deepBookConfig = CURRENT_ENV === 'mainnet' ? DEEPBOOK_MAINNET : DEEPBOOK_TESTNET;
+  const deepBookConfig =
+    CURRENT_ENV === "mainnet" ? DEEPBOOK_MAINNET : DEEPBOOK_TESTNET;
 
   tx.moveCall({
     target: `${deepBookConfig.PACKAGE_ID}::balance_manager::deposit`,
     typeArguments: [coinType],
-    arguments: [
-      tx.object(balanceManagerId),
-      coinObject,
-    ],
+    arguments: [tx.object(balanceManagerId), coinObject],
   });
 
   return tx;
@@ -774,17 +829,15 @@ export function buildWithdrawFromManagerTx(
   coinType: string,
   amount: bigint,
   senderAddress: string,
-  tx: Transaction = new Transaction()
+  tx: Transaction = new Transaction(),
 ): Transaction {
-  const deepBookConfig = CURRENT_ENV === 'mainnet' ? DEEPBOOK_MAINNET : DEEPBOOK_TESTNET;
+  const deepBookConfig =
+    CURRENT_ENV === "mainnet" ? DEEPBOOK_MAINNET : DEEPBOOK_TESTNET;
 
   const [withdrawnCoin] = tx.moveCall({
     target: `${deepBookConfig.PACKAGE_ID}::balance_manager::withdraw`,
     typeArguments: [coinType],
-    arguments: [
-      tx.object(balanceManagerId),
-      tx.pure.u64(amount),
-    ],
+    arguments: [tx.object(balanceManagerId), tx.pure.u64(amount)],
   });
 
   tx.transferObjects([withdrawnCoin], tx.pure.address(senderAddress));
@@ -810,34 +863,38 @@ export function buildFlashArbitrageTx(
   minProfit: bigint,
   senderAddress: string,
   deepCoin: any,
-  tx: Transaction = new Transaction()
+  tx: Transaction = new Transaction(),
 ): Transaction {
   const borrowPool = POOLS[borrowPoolKey as keyof typeof POOLS];
   const swapPool1 = POOLS[swapPoolKey1 as keyof typeof POOLS];
   const swapPool2 = POOLS[swapPoolKey2 as keyof typeof POOLS];
-  
+
   if (!borrowPool || !swapPool1 || !swapPool2) {
-    throw new Error('One or more pools not found');
+    throw new Error("One or more pools not found");
   }
 
-  const deepBookConfig = CURRENT_ENV === 'mainnet' ? DEEPBOOK_MAINNET : DEEPBOOK_TESTNET;
+  const deepBookConfig =
+    CURRENT_ENV === "mainnet" ? DEEPBOOK_MAINNET : DEEPBOOK_TESTNET;
 
   // Get coin types for typeArguments
-  const borrowBaseCoinType = COIN_TYPES[borrowPool.baseCoin as keyof typeof COIN_TYPES];
-  const borrowQuoteCoinType = COIN_TYPES[borrowPool.quoteCoin as keyof typeof COIN_TYPES];
-  const swap1BaseCoinType = COIN_TYPES[swapPool1.baseCoin as keyof typeof COIN_TYPES];
-  const swap1QuoteCoinType = COIN_TYPES[swapPool1.quoteCoin as keyof typeof COIN_TYPES];
-  const swap2BaseCoinType = COIN_TYPES[swapPool2.baseCoin as keyof typeof COIN_TYPES];
-  const swap2QuoteCoinType = COIN_TYPES[swapPool2.quoteCoin as keyof typeof COIN_TYPES];
+  const borrowBaseCoinType =
+    COIN_TYPES[borrowPool.baseCoin as keyof typeof COIN_TYPES];
+  const borrowQuoteCoinType =
+    COIN_TYPES[borrowPool.quoteCoin as keyof typeof COIN_TYPES];
+  const swap1BaseCoinType =
+    COIN_TYPES[swapPool1.baseCoin as keyof typeof COIN_TYPES];
+  const swap1QuoteCoinType =
+    COIN_TYPES[swapPool1.quoteCoin as keyof typeof COIN_TYPES];
+  const swap2BaseCoinType =
+    COIN_TYPES[swapPool2.baseCoin as keyof typeof COIN_TYPES];
+  const swap2QuoteCoinType =
+    COIN_TYPES[swapPool2.quoteCoin as keyof typeof COIN_TYPES];
 
   // Step 1: Borrow base asset via flash loan
   const [borrowedCoin, flashLoan] = tx.moveCall({
     target: `${deepBookConfig.PACKAGE_ID}::pool::borrow_flashloan_base`,
     typeArguments: [borrowBaseCoinType, borrowQuoteCoinType],
-    arguments: [
-      tx.object(borrowPool.poolId),
-      tx.pure.u64(borrowAmount),
-    ],
+    arguments: [tx.object(borrowPool.poolId), tx.pure.u64(borrowAmount)],
   });
 
   // Step 2: Swap borrowed asset in first swap pool
@@ -849,7 +906,7 @@ export function buildFlashArbitrageTx(
       borrowedCoin,
       deepCoin,
       tx.pure.u64(0), // min out (we'll check profit at the end)
-      tx.object('0x6'),
+      tx.object("0x6"),
     ],
   });
 
@@ -862,7 +919,7 @@ export function buildFlashArbitrageTx(
       swapOut1Quote,
       swapOut1Deep,
       tx.pure.u64(borrowAmount + minProfit), // need at least borrowed + profit
-      tx.object('0x6'),
+      tx.object("0x6"),
     ],
   });
 
@@ -870,15 +927,14 @@ export function buildFlashArbitrageTx(
   tx.moveCall({
     target: `${deepBookConfig.PACKAGE_ID}::pool::return_flashloan_base`,
     typeArguments: [borrowBaseCoinType, borrowQuoteCoinType],
-    arguments: [
-      tx.object(borrowPool.poolId),
-      swapOut2Base,
-      flashLoan,
-    ],
+    arguments: [tx.object(borrowPool.poolId), swapOut2Base, flashLoan],
   });
 
   // Step 5: Transfer profit to sender (remaining coins after repayment)
-  tx.transferObjects([swapOut2Quote, swapOut2Deep, swapOut1Base], tx.pure.address(senderAddress));
+  tx.transferObjects(
+    [swapOut2Quote, swapOut2Deep, swapOut1Base],
+    tx.pure.address(senderAddress),
+  );
 
   return tx;
 }
@@ -893,9 +949,12 @@ export function calculateMinOutput(
   price: number,
   slippageBps: number,
   decimalsIn: number,
-  decimalsOut: number
+  decimalsOut: number,
 ): bigint {
-  const expectedOutput = (Number(amount) / Math.pow(10, decimalsIn)) * price * Math.pow(10, decimalsOut);
+  const expectedOutput =
+    (Number(amount) / Math.pow(10, decimalsIn)) *
+    price *
+    Math.pow(10, decimalsOut);
   const minOutput = expectedOutput * (1 - slippageBps / 10000);
   return BigInt(Math.floor(minOutput));
 }
@@ -941,12 +1000,17 @@ export function getCoinDecimals(coinSymbol: string): number {
  * Calculate arbitrage opportunity
  */
 export async function findArbitrageOpportunity(
-  poolKeys: string[]
-): Promise<{ exists: boolean; pools: string[]; estimatedProfit: number; path: string[] } | null> {
+  poolKeys: string[],
+): Promise<{
+  exists: boolean;
+  pools: string[];
+  estimatedProfit: number;
+  path: string[];
+} | null> {
   if (poolKeys.length < 2) return null;
 
   const prices: Record<string, number> = {};
-  
+
   for (const key of poolKeys) {
     prices[key] = await fetchPrice(key);
   }
@@ -955,19 +1019,20 @@ export async function findArbitrageOpportunity(
   // For real arbitrage, you'd need more sophisticated routing
   const pool1 = poolKeys[0];
   const pool2 = poolKeys[1];
-  
+
   const price1 = prices[pool1];
   const price2 = prices[pool2];
-  
+
   // Check if there's a price discrepancy
   const priceDiff = Math.abs(price1 - price2) / Math.min(price1, price2);
-  
-  if (priceDiff > 0.005) { // 0.5% opportunity
+
+  if (priceDiff > 0.005) {
+    // 0.5% opportunity
     return {
       exists: true,
       pools: [pool1, pool2],
       estimatedProfit: priceDiff * 100,
-      path: [pool1.split('_')[0], pool1.split('_')[1], pool2.split('_')[0]],
+      path: [pool1.split("_")[0], pool1.split("_")[1], pool2.split("_")[0]],
     };
   }
 
@@ -982,17 +1047,19 @@ export async function findArbitrageOpportunity(
  */
 export function buildDemoSwapTx(
   pair: string,
-  side: 'buy' | 'sell',
+  side: "buy" | "sell",
   amount: number,
-  tx: Transaction = new Transaction()
+  tx: Transaction = new Transaction(),
 ): { tx: Transaction; description: string } {
   const pool = POOLS[pair as keyof typeof POOLS];
   if (!pool) throw new Error(`Unknown pair: ${pair}`);
 
   // Use very small amounts for demo (0.01 SUI worth)
-  const demoAmount = BigInt(Math.floor(amount * Math.pow(10, pool.baseDecimals)));
-  
-  const description = `Demo ${side} ${amount} ${pair.split('_')[0]} at market price`;
+  const demoAmount = BigInt(
+    Math.floor(amount * Math.pow(10, pool.baseDecimals)),
+  );
+
+  const description = `Demo ${side} ${amount} ${pair.split("_")[0]} at market price`;
 
   // For demo mode, we just emit an event rather than executing real swap
   if (DEMO_MODE) {
@@ -1014,7 +1081,7 @@ export function buildDemoFlashArbitrageTx(
   swapPool2: string,
   borrowAmount: number,
   senderAddress: string,
-  tx: Transaction = new Transaction()
+  tx: Transaction = new Transaction(),
 ): { tx: Transaction; description: string } {
   const description = `Demo flash arbitrage: Borrow ${borrowAmount} from ${borrowPool}, swap through ${swapPool1} → ${swapPool2}`;
 
@@ -1033,8 +1100,8 @@ export function buildDemoFlashArbitrageTx(
  */
 export async function simulateTrade(
   poolKey: string,
-  side: 'buy' | 'sell',
-  amount: number
+  side: "buy" | "sell",
+  amount: number,
 ): Promise<{
   inputAmount: number;
   outputAmount: number;
@@ -1044,20 +1111,20 @@ export async function simulateTrade(
 }> {
   const price = await fetchPrice(poolKey);
   const pool = POOLS[poolKey as keyof typeof POOLS];
-  
+
   if (!pool) {
     throw new Error(`Pool not found: ${poolKey}`);
   }
 
-  const isBuy = side === 'buy';
+  const isBuy = side === "buy";
   const outputAmount = isBuy ? amount / price : amount * price;
-  
+
   // Estimate price impact based on typical liquidity
   const priceImpact = Math.min(amount * 0.001, 5); // Max 5% impact
-  
+
   // DeepBook fee is typically 0.1%
   const fee = outputAmount * 0.001;
-  
+
   // Calculate minimum received with 1% slippage
   const minimumReceived = outputAmount * 0.99 - fee;
 
@@ -1081,16 +1148,16 @@ export default {
   POOLS,
   CURRENT_ENV,
   DEMO_MODE,
-  
+
   // Client
   createDeepBookClient,
   getDeepBookClient,
-  
+
   // Price fetching
   fetchPrice,
   fetchPrices,
   fetchOrderBook,
-  
+
   // PTB Builders
   buildSwapTx,
   buildCompleteSwapTx,
@@ -1100,18 +1167,18 @@ export default {
   buildMarketOrderTx,
   buildCancelOrderTx,
   buildFlashArbitrageTx,
-  
+
   // Balance Manager
   buildCreateBalanceManagerTx,
   buildMintTradeCapTx,
   buildDepositToManagerTx,
   buildWithdrawFromManagerTx,
-  
+
   // Demo
   buildDemoSwapTx,
   buildDemoFlashArbitrageTx,
   simulateTrade,
-  
+
   // Utilities
   calculateMinOutput,
   formatAmount,
@@ -1120,7 +1187,7 @@ export default {
   getAvailablePools,
   getCoinDecimals,
   findArbitrageOpportunity,
-  
+
   // Constants
   ORDER_TYPE,
   SELF_MATCHING_OPTION,

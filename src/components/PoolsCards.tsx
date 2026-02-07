@@ -4,8 +4,17 @@ import { useQuery } from "@tanstack/react-query";
 import axios from "axios";
 import { MarketFiltersType } from "@/components/MarketFilters";
 import { useState, useEffect, useMemo } from "react";
-import { Activity } from "lucide-react";
-import { PoolCard } from "@/components/PoolCard";
+import { Activity, TrendingUp, TrendingDown } from "lucide-react";
+import Link from "next/link";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 
 interface PoolData {
   pool_id: string;
@@ -287,12 +296,126 @@ export function PoolsCards({ network, filters }: PoolsTableProps) {
           No pools match the current filters.
         </div>
       ) : (
-        <div className=" flex flex-col space-y-8">
-          {filteredAndSortedData.map((market) => (
-            <PoolCard key={market.poolId} market={market} network={network} />
-          ))}
+        <div className="rounded-lg border border-border bg-card shadow-sm">
+          <Table>
+            <TableHeader>
+              <TableRow className="hover:bg-transparent border-b border-border">
+                <TableHead className="w-12 text-xs uppercase font-semibold">
+                  #
+                </TableHead>
+                <TableHead className="text-xs uppercase font-semibold">
+                  Pool
+                </TableHead>
+                <TableHead className="text-right text-xs uppercase font-semibold">
+                  Price
+                </TableHead>
+                <TableHead className="text-right text-xs uppercase font-semibold">
+                  24h Change
+                </TableHead>
+                <TableHead className="text-right text-xs uppercase font-semibold">
+                  24h Volume
+                </TableHead>
+                <TableHead className="text-right text-xs uppercase font-semibold">
+                  Best Bid
+                </TableHead>
+                <TableHead className="text-right text-xs uppercase font-semibold">
+                  Best Ask
+                </TableHead>
+                <TableHead className="text-right text-xs uppercase font-semibold">
+                  Spread
+                </TableHead>
+                <TableHead className="text-xs uppercase font-semibold">
+                  Status
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredAndSortedData.map((market, index) => {
+                const priceChange = market.priceChange24h;
+                const isPositive = priceChange >= 0;
+                const changePercent = (priceChange * 100).toFixed(2);
+
+                return (
+                  <TableRow
+                    key={market.poolId}
+                    className="cursor-pointer hover:bg-accent/50 transition-colors border-b border-border/50 last:border-b-0"
+                  >
+                    <TableCell className="font-medium text-muted-foreground text-sm">
+                      {index + 1}
+                    </TableCell>
+                    <TableCell>
+                      <Link
+                        href={`/indexer/${network}/${market.poolId}`}
+                        className="flex flex-col hover:opacity-80 transition-opacity"
+                      >
+                        <div className="font-semibold text-foreground">
+                          {market.baseSymbol}/{market.quoteSymbol}
+                        </div>
+                        <div className="text-xs text-muted-foreground">
+                          {market.poolName}
+                        </div>
+                      </Link>
+                    </TableCell>
+                    <TableCell className="text-right font-mono font-medium text-foreground">
+                      {market.lastPrice.toFixed(4)}
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        {isPositive ? (
+                          <TrendingUp className="h-3.5 w-3.5 text-green-600" />
+                        ) : (
+                          <TrendingDown className="h-3.5 w-3.5 text-red-600" />
+                        )}
+                        <span
+                          className={
+                            isPositive
+                              ? "text-green-600 font-semibold text-sm"
+                              : "text-red-600 font-semibold text-sm"
+                          }
+                        >
+                          {isPositive ? "+" : ""}
+                          {changePercent}%
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right font-mono text-foreground font-medium">
+                      {formatVolume(market.quoteVolume24h)}
+                    </TableCell>
+                    <TableCell className="text-right font-mono text-muted-foreground text-sm">
+                      {market.bestBid > 0 ? market.bestBid.toFixed(4) : "—"}
+                    </TableCell>
+                    <TableCell className="text-right font-mono text-muted-foreground text-sm">
+                      {market.bestAsk > 0 ? market.bestAsk.toFixed(4) : "—"}
+                    </TableCell>
+                    <TableCell className="text-right text-sm">
+                      <span className="text-muted-foreground">
+                        {market.spread > 0
+                          ? `${market.spreadPercent.toFixed(2)}%`
+                          : "—"}
+                      </span>
+                    </TableCell>
+                    <TableCell>
+                      <Badge
+                        variant={market.isFrozen ? "destructive" : "secondary"}
+                        className="text-xs"
+                      >
+                        {market.isFrozen ? "Frozen" : "Active"}
+                      </Badge>
+                    </TableCell>
+                  </TableRow>
+                );
+              })}
+            </TableBody>
+          </Table>
         </div>
       )}
     </div>
   );
+}
+
+function formatVolume(volume: number): string {
+  if (volume >= 1e9) return (volume / 1e9).toFixed(2) + "B";
+  if (volume >= 1e6) return (volume / 1e6).toFixed(2) + "M";
+  if (volume >= 1e3) return (volume / 1e3).toFixed(2) + "K";
+  return volume.toFixed(2);
 }

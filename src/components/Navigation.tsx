@@ -3,9 +3,33 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
-import { ConnectButton, useCurrentAccount } from "@mysten/dapp-kit";
+import {
+  ConnectButton,
+  useCurrentAccount,
+  useSuiClient,
+} from "@mysten/dapp-kit";
 import { useAuth } from "@/contexts/AuthContext";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import {
+  Wallet,
+  Copy,
+  ExternalLink,
+  LogOut,
+  User,
+  Network,
+} from "lucide-react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
+import { CURRENT_ENV } from "@/lib/deepbook";
 
 const navigation = [
   { name: "Home", href: "/" },
@@ -14,30 +38,104 @@ const navigation = [
 ];
 
 function WalletStatus() {
-  const { isAuthenticated, session } = useAuth();
+  const { isAuthenticated, session, logout } = useAuth();
   const dappKitAccount = useCurrentAccount();
+  const suiClient = useSuiClient();
+  const router = useRouter();
+  const [balance, setBalance] = useState<string>("0");
+  const [copied, setCopied] = useState(false);
+
+  const activeAddress = dappKitAccount?.address || session?.zkLoginAddress;
+
+  useEffect(() => {
+    if (activeAddress) {
+      suiClient
+        .getBalance({ owner: activeAddress, coinType: "0x2::sui::SUI" })
+        .then((res) => {
+          const suiBalance = (Number(res.totalBalance) / 1_000_000_000).toFixed(
+            4,
+          );
+          setBalance(suiBalance);
+        })
+        .catch(() => setBalance("0"));
+    }
+  }, [activeAddress, suiClient]);
+
+  const copyAddress = () => {
+    if (activeAddress) {
+      navigator.clipboard.writeText(activeAddress);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    }
+  };
+
+  const handleLogout = () => {
+    if (logout) {
+      logout();
+      router.push("/");
+    }
+  };
 
   // Show zkLogin status if authenticated via zkLogin
   if (isAuthenticated && session?.zkLoginAddress) {
     return (
-      <div className="flex items-center gap-3">
-        <Badge
-          variant="secondary"
-          className="px-3 py-1.5 flex items-center gap-2"
-        >
-          <div className="w-2 h-2 bg-primary rounded-full" />
-          <span className="text-primary text-xs font-medium">zkLogin</span>
-          <span className="text-muted-foreground text-xs font-mono">
-            {session.zkLoginAddress.slice(0, 6)}...
-            {session.zkLoginAddress.slice(-4)}
-          </span>
+      <div className="flex items-center gap-2">
+        <Badge variant="outline" className="px-2 py-1 text-xs">
+          <Network className="w-3 h-3 mr-1" />
+          {CURRENT_ENV}
         </Badge>
-        <Link
-          href="/dashboard"
-          className="px-3 py-1.5 bg-secondary hover:bg-secondary/80 rounded-lg text-sm text-secondary-foreground transition-colors"
-        >
-          Dashboard
-        </Link>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="flex items-center gap-2">
+              <Wallet className="w-4 h-4" />
+              <span className="hidden sm:inline text-xs font-mono">
+                {session.zkLoginAddress.slice(0, 6)}...
+                {session.zkLoginAddress.slice(-4)}
+              </span>
+              <Badge variant="secondary" className="ml-1 px-1.5 py-0.5 text-xs">
+                {balance} SUI
+              </Badge>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel className="flex items-center justify-between">
+              <span>Account</span>
+              <Badge variant="outline" className="text-xs">
+                zkLogin
+              </Badge>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={copyAddress} className="cursor-pointer">
+              <Copy className="w-4 h-4 mr-2" />
+              {copied ? "Copied!" : "Copy Address"}
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/dashboard" className="cursor-pointer">
+                <User className="w-4 h-4 mr-2" />
+                Dashboard
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <a
+                href={`https://suiscan.xyz/${CURRENT_ENV}/account/${session.zkLoginAddress}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="cursor-pointer"
+              >
+                <ExternalLink className="w-4 h-4 mr-2" />
+                View on Explorer
+              </a>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem
+              onClick={handleLogout}
+              className="cursor-pointer text-destructive"
+            >
+              <LogOut className="w-4 h-4 mr-2" />
+              Sign Out
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     );
   }
@@ -45,14 +143,65 @@ function WalletStatus() {
   // Show dapp-kit wallet if connected
   if (dappKitAccount) {
     return (
-      <div className="flex items-center gap-3">
-        <ConnectButton />
-        <Link
-          href="/dashboard"
-          className="px-3 py-1.5 bg-primary/10 hover:bg-primary/20 border border-primary/30 rounded-lg text-sm text-primary transition-colors"
-        >
-          Dashboard
-        </Link>
+      <div className="flex items-center gap-2">
+        <Badge variant="outline" className="px-2 py-1 text-xs">
+          <Network className="w-3 h-3 mr-1" />
+          {CURRENT_ENV}
+        </Badge>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="outline" className="flex items-center gap-2">
+              <Wallet className="w-4 h-4" />
+              <span className="hidden sm:inline text-xs font-mono">
+                {dappKitAccount.address.slice(0, 6)}...
+                {dappKitAccount.address.slice(-4)}
+              </span>
+              <Badge variant="secondary" className="ml-1 px-1.5 py-0.5 text-xs">
+                {balance} SUI
+              </Badge>
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuLabel className="flex items-center justify-between">
+              <span>Wallet</span>
+              <Badge variant="outline" className="text-xs">
+                Connected
+              </Badge>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={copyAddress} className="cursor-pointer">
+              <Copy className="w-4 h-4 mr-2" />
+              {copied ? "Copied!" : "Copy Address"}
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/dashboard" className="cursor-pointer">
+                <User className="w-4 h-4 mr-2" />
+                Dashboard
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/trade/balance-manager" className="cursor-pointer">
+                <Wallet className="w-4 h-4 mr-2" />
+                Balance Manager
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <a
+                href={`https://suiscan.xyz/${CURRENT_ENV}/account/${dappKitAccount.address}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="cursor-pointer"
+              >
+                <ExternalLink className="w-4 h-4 mr-2" />
+                View on Explorer
+              </a>
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <div className="px-2 py-1.5">
+              <ConnectButton />
+            </div>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
     );
   }

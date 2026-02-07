@@ -105,7 +105,7 @@ export function MarketStats({ network = "testnet" }: MarketStatsProps) {
 
   if (isLoading) {
     return (
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+      <div className="space-y-3">
         {[...Array(4)].map((_, i) => (
           <Card key={i} className="p-4">
             <div className="animate-pulse">
@@ -119,66 +119,82 @@ export function MarketStats({ network = "testnet" }: MarketStatsProps) {
   }
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+    <div className="space-y-3">
       {/* Total Markets */}
-      <Card className="p-4">
+      <Card className="p-4 border-border hover:border-primary/50 transition-colors">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-muted-foreground">Total Markets</p>
-            <p className="text-2xl font-bold">{data?.totalMarkets || 0}</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">
+              Total Markets
+            </p>
+            <p className="text-2xl font-bold text-foreground mt-1">
+              {data?.totalMarkets || 0}
+            </p>
           </div>
-          <BarChart3 className="h-8 w-8 text-primary" />
+          <BarChart3 className="h-7 w-7 text-primary" />
         </div>
       </Card>
 
       {/* 24h Volume */}
-      <Card className="p-4">
+      <Card className="p-4 border-border hover:border-primary/50 transition-colors">
         <div className="flex items-center justify-between">
           <div>
-            <p className="text-sm text-muted-foreground">24h Volume</p>
-            <p className="text-2xl font-bold">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">
+              24h Volume
+            </p>
+            <p className="text-2xl font-bold text-foreground mt-1">
               ${formatNumber(data?.totalVolume24h || 0)}
             </p>
           </div>
-          <Volume2 className="h-8 w-8 text-blue-500" />
+          <Volume2 className="h-7 w-7 text-primary" />
         </div>
       </Card>
 
       {/* Top Gainer */}
-      <Card className="p-4">
+      <Card className="p-4 border-border hover:border-green-600/50 transition-colors">
         <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-muted-foreground">Top Gainer</p>
-            <p className="text-lg font-bold truncate">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">
+              Top Gainer
+            </p>
+            <p className="text-base font-bold text-foreground truncate mt-1">
               {data?.topGainer?.pair || "N/A"}
             </p>
             {data?.topGainer && (
-              <Badge variant="default" className="text-green-600 bg-green-50">
+              <Badge
+                variant="secondary"
+                className="text-green-600 bg-green-600/10 mt-2"
+              >
                 <TrendingUp className="h-3 w-3 mr-1" />+
                 {data.topGainer.change.toFixed(2)}%
               </Badge>
             )}
           </div>
-          <TrendingUp className="h-8 w-8 text-green-500" />
+          <TrendingUp className="h-7 w-7 text-green-600 ml-2" />
         </div>
       </Card>
 
       {/* Top Loser */}
-      <Card className="p-4">
+      <Card className="p-4 border-border hover:border-red-600/50 transition-colors">
         <div className="flex items-center justify-between">
-          <div>
-            <p className="text-sm text-muted-foreground">Top Loser</p>
-            <p className="text-lg font-bold truncate">
+          <div className="flex-1 min-w-0">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide">
+              Top Loser
+            </p>
+            <p className="text-base font-bold text-foreground truncate mt-1">
               {data?.topLoser?.pair || "N/A"}
             </p>
             {data?.topLoser && (
-              <Badge variant="destructive">
+              <Badge
+                variant="secondary"
+                className="text-red-600 bg-red-600/10 mt-2"
+              >
                 <TrendingDown className="h-3 w-3 mr-1" />
                 {data.topLoser.change.toFixed(2)}%
               </Badge>
             )}
           </div>
-          <TrendingDown className="h-8 w-8 text-red-500" />
+          <TrendingDown className="h-7 w-7 text-red-600 ml-2" />
         </div>
       </Card>
     </div>

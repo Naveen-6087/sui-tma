@@ -111,20 +111,20 @@ export default function DashboardPage() {
 
   if (isLoading || !isConnected) {
     return (
-      <div className="min-h-screen bg-black flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-sky-500 border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-black text-white">
+    <div className="min-h-screen bg-background">
       <div className="w-full max-w-2xl mx-auto px-4 py-8 flex flex-col gap-6">
         {/* Back Link */}
         <div>
           <Link
             href="/"
-            className="text-gray-400 hover:text-white text-sm flex items-center gap-2"
+            className="text-muted-foreground hover:text-foreground text-sm flex items-center gap-2 transition-colors"
           >
             <svg
               className="w-4 h-4"
@@ -144,21 +144,23 @@ export default function DashboardPage() {
         </div>
 
         {/* Wallet Card */}
-        <div className="bg-linear-to-br from-sky-500/10 to-purple-500/10 rounded-2xl p-6 border border-sky-500/20">
+        <div className="bg-linear-to-br from-primary/10 to-primary/5 rounded-2xl p-6 border border-primary/20">
           <div className="flex justify-between items-start mb-6">
             <div>
-              <p className="text-gray-400 text-sm mb-1">Total Balance</p>
-              <h2 className="text-3xl font-bold text-white">
+              <p className="text-muted-foreground text-sm mb-1">
+                Total Balance
+              </p>
+              <h2 className="text-3xl font-bold text-foreground">
                 {displayBalance} SUI
               </h2>
             </div>
             <button
               onClick={handleRefreshBalance}
               disabled={isRefreshing}
-              className="p-2.5 bg-white/5 hover:bg-white/10 rounded-lg transition-colors"
+              className="p-2.5 bg-accent hover:bg-accent/80 rounded-lg transition-colors"
             >
               <svg
-                className={`w-5 h-5 text-gray-400 ${isRefreshing ? "animate-spin" : ""}`}
+                className={`w-5 h-5 text-muted-foreground ${isRefreshing ? "animate-spin" : ""}`}
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -173,17 +175,17 @@ export default function DashboardPage() {
             </button>
           </div>
 
-          <div className="flex items-center gap-2 p-3 bg-black/30 rounded-lg">
-            <div className="flex-1 font-mono text-sm text-gray-300 truncate">
+          <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+            <div className="flex-1 font-mono text-sm text-foreground truncate">
               {activeAddress ? formatAddress(activeAddress, 8) : ""}
             </div>
             <button
               onClick={handleCopyAddress}
-              className="p-2 hover:bg-white/10 rounded transition-colors"
+              className="p-2 hover:bg-accent rounded transition-colors"
             >
               {copied ? (
                 <svg
-                  className="w-4 h-4 text-green-400"
+                  className="w-4 h-4 text-green-600"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -197,7 +199,7 @@ export default function DashboardPage() {
                 </svg>
               ) : (
                 <svg
-                  className="w-4 h-4 text-gray-400"
+                  className="w-4 h-4 text-muted-foreground"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
@@ -218,10 +220,10 @@ export default function DashboardPage() {
                   "_blank",
                 )
               }
-              className="p-2 hover:bg-white/10 rounded transition-colors"
+              className="p-2 hover:bg-accent rounded transition-colors"
             >
               <svg
-                className="w-4 h-4 text-gray-400"
+                className="w-4 h-4 text-muted-foreground"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -241,9 +243,9 @@ export default function DashboardPage() {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <Link
             href="/intents/create"
-            className="p-4 bg-gray-900/50 hover:bg-gray-900 border border-gray-800 hover:border-green-500/30 rounded-xl text-center transition-all group"
+            className="p-4 bg-card hover:bg-accent/50 border border-border hover:border-green-600/30 rounded-xl text-center transition-all group"
           >
-            <div className="w-10 h-10 mx-auto mb-2 bg-green-500/10 border border-green-500/20 rounded-lg flex items-center justify-center text-green-400 group-hover:bg-green-500/20">
+            <div className="w-10 h-10 mx-auto mb-2 bg-green-600/10 border border-green-600/20 rounded-lg flex items-center justify-center text-green-600 group-hover:bg-green-600/20">
               <svg
                 className="w-5 h-5"
                 fill="none"
@@ -258,15 +260,15 @@ export default function DashboardPage() {
                 />
               </svg>
             </div>
-            <p className="font-medium text-sm text-white">New Intent</p>
-            <p className="text-xs text-gray-500 mt-0.5">Create trade</p>
+            <p className="font-medium text-sm text-foreground">New Intent</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Create trade</p>
           </Link>
 
           <Link
             href="/intents"
-            className="p-4 bg-gray-900/50 hover:bg-gray-900 border border-gray-800 hover:border-sky-500/30 rounded-xl text-center transition-all group"
+            className="p-4 bg-card hover:bg-accent/50 border border-border hover:border-primary/30 rounded-xl text-center transition-all group"
           >
-            <div className="w-10 h-10 mx-auto mb-2 bg-sky-500/10 border border-sky-500/20 rounded-lg flex items-center justify-center text-sky-400 group-hover:bg-sky-500/20">
+            <div className="w-10 h-10 mx-auto mb-2 bg-primary/10 border border-primary/20 rounded-lg flex items-center justify-center text-primary group-hover:bg-primary/20">
               <svg
                 className="w-5 h-5"
                 fill="none"
@@ -281,15 +283,15 @@ export default function DashboardPage() {
                 />
               </svg>
             </div>
-            <p className="font-medium text-sm text-white">My Intents</p>
-            <p className="text-xs text-gray-500 mt-0.5">View active</p>
+            <p className="font-medium text-sm text-foreground">My Intents</p>
+            <p className="text-xs text-muted-foreground mt-0.5">View active</p>
           </Link>
 
           <Link
             href="/trade"
-            className="p-4 bg-gray-900/50 hover:bg-gray-900 border border-gray-800 hover:border-purple-500/30 rounded-xl text-center transition-all group"
+            className="p-4 bg-card hover:bg-accent/50 border border-border hover:border-primary/30 rounded-xl text-center transition-all group"
           >
-            <div className="w-10 h-10 mx-auto mb-2 bg-purple-500/10 border border-purple-500/20 rounded-lg flex items-center justify-center text-purple-400 group-hover:bg-purple-500/20">
+            <div className="w-10 h-10 mx-auto mb-2 bg-primary/10 border border-primary/20 rounded-lg flex items-center justify-center text-primary group-hover:bg-primary/20">
               <svg
                 className="w-5 h-5"
                 fill="none"
@@ -304,17 +306,17 @@ export default function DashboardPage() {
                 />
               </svg>
             </div>
-            <p className="font-medium text-sm text-white">Trading Hub</p>
-            <p className="text-xs text-gray-500 mt-0.5">DeFi demos</p>
+            <p className="font-medium text-sm text-foreground">Trading Hub</p>
+            <p className="text-xs text-muted-foreground mt-0.5">DeFi demos</p>
           </Link>
 
           <button
             onClick={() =>
               window.open("https://faucet.testnet.sui.io/", "_blank")
             }
-            className="p-4 bg-gray-900/50 hover:bg-gray-900 border border-gray-800 hover:border-orange-500/30 rounded-xl text-center transition-all group"
+            className="p-4 bg-card hover:bg-accent/50 border border-border hover:border-orange-600/30 rounded-xl text-center transition-all group"
           >
-            <div className="w-10 h-10 mx-auto mb-2 bg-orange-500/10 border border-orange-500/20 rounded-lg flex items-center justify-center text-orange-400 group-hover:bg-orange-500/20">
+            <div className="w-10 h-10 mx-auto mb-2 bg-orange-600/10 border border-orange-600/20 rounded-lg flex items-center justify-center text-orange-600 group-hover:bg-orange-600/20">
               <svg
                 className="w-5 h-5"
                 fill="none"
@@ -329,22 +331,24 @@ export default function DashboardPage() {
                 />
               </svg>
             </div>
-            <p className="font-medium text-sm text-white">Faucet</p>
-            <p className="text-xs text-gray-500 mt-0.5">Get testnet SUI</p>
+            <p className="font-medium text-sm text-foreground">Faucet</p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Get testnet SUI
+            </p>
           </button>
         </div>
 
         {/* Session Info */}
-        <div className="bg-gray-900/50 rounded-xl border border-gray-800 overflow-hidden">
-          <div className="px-4 py-3 border-b border-gray-800">
-            <h3 className="font-medium text-white">Session Info</h3>
+        <div className="bg-card rounded-xl border border-border overflow-hidden">
+          <div className="px-4 py-3 border-b border-border">
+            <h3 className="font-medium text-foreground">Session Info</h3>
           </div>
 
           <div className="p-4 space-y-3">
             <div className="flex items-center gap-3">
-              <div className="w-8 h-8 bg-green-500/10 rounded-lg flex items-center justify-center">
+              <div className="w-8 h-8 bg-green-600/10 rounded-lg flex items-center justify-center">
                 <svg
-                  className="w-4 h-4 text-green-400"
+                  className="w-4 h-4 text-green-600"
                   fill="currentColor"
                   viewBox="0 0 20 20"
                 >
@@ -356,21 +360,23 @@ export default function DashboardPage() {
                 </svg>
               </div>
               <div className="flex-1">
-                <p className="text-sm font-medium text-white">Session Active</p>
-                <p className="text-xs text-gray-500">
+                <p className="text-sm font-medium text-foreground">
+                  Session Active
+                </p>
+                <p className="text-xs text-muted-foreground">
                   {isZkLogin ? "Google zkLogin" : "Wallet Connected"}
                 </p>
               </div>
-              <span className="px-2.5 py-1 text-xs font-medium bg-green-500/10 text-green-400 rounded-full">
+              <span className="px-2.5 py-1 text-xs font-medium bg-green-600/10 text-green-600 rounded-full">
                 Connected
               </span>
             </div>
 
             {isZkLogin && session && (
               <div className="flex items-center gap-3">
-                <div className="w-8 h-8 bg-gray-800 rounded-lg flex items-center justify-center">
+                <div className="w-8 h-8 bg-muted rounded-lg flex items-center justify-center">
                   <svg
-                    className="w-4 h-4 text-gray-400"
+                    className="w-4 h-4 text-muted-foreground"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -384,8 +390,10 @@ export default function DashboardPage() {
                   </svg>
                 </div>
                 <div className="flex-1">
-                  <p className="text-sm font-medium text-white">Valid Until</p>
-                  <p className="text-xs text-gray-500">
+                  <p className="text-sm font-medium text-foreground">
+                    Valid Until
+                  </p>
+                  <p className="text-xs text-muted-foreground">
                     Epoch {session.maxEpoch}
                   </p>
                 </div>
@@ -397,7 +405,7 @@ export default function DashboardPage() {
         {/* Logout Button */}
         <button
           onClick={handleLogout}
-          className="w-full py-3 bg-transparent hover:bg-red-500/10 border border-red-500/30 text-red-400 rounded-xl font-medium flex items-center justify-center gap-2 transition-colors"
+          className="w-full py-3 bg-transparent hover:bg-red-600/10 border border-red-600/30 text-red-600 rounded-xl font-medium flex items-center justify-center gap-2 transition-colors"
         >
           <svg
             className="w-5 h-5"

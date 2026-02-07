@@ -1,19 +1,19 @@
 /**
  * DeepBook V3 Client Integration
- * 
+ *
  * This module provides a complete integration with DeepBook V3 SDK
  * for executing swaps, orders, flash loans, and managing balance managers.
- * 
+ *
  * Uses testnet coins: DBUSDC, DBUSDT (mock stablecoins provided by DeepBook)
  * And existing testnet pools: SUI_DBUSDC, DEEP_DBUSDC, etc.
  */
 
-import { deepbook, type DeepBookClient } from '@mysten/deepbook-v3';
-import type { BalanceManager, Coin, Pool } from '@mysten/deepbook-v3';
-import { SuiJsonRpcClient, getJsonRpcFullnodeUrl } from '@mysten/sui/jsonRpc';
-import { Transaction } from '@mysten/sui/transactions';
-import { Ed25519Keypair } from '@mysten/sui/keypairs/ed25519';
-import { decodeSuiPrivateKey } from '@mysten/sui/cryptography';
+import { deepbook, type DeepBookClient } from "@mysten/deepbook-v3";
+import type { BalanceManager, Coin, Pool } from "@mysten/deepbook-v3";
+import { SuiJsonRpcClient, getJsonRpcFullnodeUrl } from "@mysten/sui/jsonRpc";
+import { Transaction } from "@mysten/sui/transactions";
+import { Ed25519Keypair } from "@mysten/sui/keypairs/ed25519";
+import { decodeSuiPrivateKey } from "@mysten/sui/cryptography";
 
 // Type alias for client
 type SuiClient = SuiJsonRpcClient;
@@ -25,16 +25,16 @@ export type PoolMapType = Record<string, Pool>;
 
 // ============== Network Configuration ==============
 
-export type NetworkEnv = 'testnet' | 'mainnet';
+export type NetworkEnv = "testnet" | "mainnet";
 
 export const NETWORK_CONFIG = {
   testnet: {
-    rpcUrl: 'https://fullnode.testnet.sui.io:443',
-    indexerUrl: 'https://deepbook-indexer.testnet.sui.io',
+    rpcUrl: "https://fullnode.testnet.sui.io:443",
+    indexerUrl: "https://deepbook-indexer.testnet.sui.io",
   },
   mainnet: {
-    rpcUrl: 'https://fullnode.mainnet.sui.io:443',
-    indexerUrl: 'https://deepbook-indexer.mainnet.sui.io',
+    rpcUrl: "https://fullnode.mainnet.sui.io:443",
+    indexerUrl: "https://deepbook-indexer.mainnet.sui.io",
   },
 };
 
@@ -44,15 +44,21 @@ export const NETWORK_CONFIG = {
 export const DEEPBOOK_CONFIG = {
   // Mainnet Package IDs
   mainnet: {
-    PACKAGE_ID: '0x337f4f4f6567fcd778d5454f27c16c70e2f274cc6377ea6249ddf491482ef497',
-    REGISTRY_ID: '0xaf16199a2dff736e9f07a845f23c5da6df6f756eddb631aed9d24a93efc4549d',
-    DEEP_TREASURY_ID: '0x69fffdae0075f8f71f4fa793549c11079266910e8905169845af1f5d00e09dcb',
+    PACKAGE_ID:
+      "0x337f4f4f6567fcd778d5454f27c16c70e2f274cc6377ea6249ddf491482ef497",
+    REGISTRY_ID:
+      "0xaf16199a2dff736e9f07a845f23c5da6df6f756eddb631aed9d24a93efc4549d",
+    DEEP_TREASURY_ID:
+      "0x69fffdae0075f8f71f4fa793549c11079266910e8905169845af1f5d00e09dcb",
   },
   // Testnet Package IDs (DIFFERENT from mainnet!)
   testnet: {
-    PACKAGE_ID: '0x22be4cade64bf2d02412c7e8d0e8beea2f78828b948118d46735315409371a3c',
-    REGISTRY_ID: '0x7c256edbda983a2cd6f946655f4bf3f00a41043993781f8674a7046e8c0e11d1',
-    DEEP_TREASURY_ID: '0x032abf8948dda67a271bcc18e776dbbcfb0d58c8d288a700ff0d5521e57a1ffe',
+    PACKAGE_ID:
+      "0xfb28c4cbc6865bd1c897d26aecbe1f8792d1509a20ffec692c800660cbec6982",
+    REGISTRY_ID:
+      "0x7c256edbda983a2cd6f946655f4bf3f00a41043993781f8674a7046e8c0e11d1",
+    DEEP_TREASURY_ID:
+      "0x032abf8948dda67a271bcc18e776dbbcfb0d58c8d288a700ff0d5521e57a1ffe",
   },
 };
 
@@ -77,7 +83,7 @@ export const GAS_BUDGET = 500_000_000; // 0.5 SUI
 /**
  * Maximum timestamp for order expiration (never expires)
  */
-export const MAX_TIMESTAMP = BigInt('18446744073709551615'); // u64::MAX
+export const MAX_TIMESTAMP = BigInt("18446744073709551615"); // u64::MAX
 
 /**
  * Pool creation fee in DEEP (1000 DEEP)
@@ -89,23 +95,27 @@ export const POOL_CREATION_FEE_DEEP = 1_000_000_000_000; // 1000 * 1e6
 // Testnet Coins (DBUSDC, DBUSDT are DeepBook's testnet mock tokens)
 export const TESTNET_COINS: CoinMapType = {
   SUI: {
-    address: '0x0000000000000000000000000000000000000000000000000000000000000002',
-    type: '0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI',
+    address:
+      "0x0000000000000000000000000000000000000000000000000000000000000002",
+    type: "0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI",
     scalar: 1e9,
   },
   DEEP: {
-    address: '0xdeeb7a4662eec9f2f3def03fb937a663dddaa2e215b8078a284d026b7946c270',
-    type: '0xdeeb7a4662eec9f2f3def03fb937a663dddaa2e215b8078a284d026b7946c270::deep::DEEP',
+    address:
+      "0xdeeb7a4662eec9f2f3def03fb937a663dddaa2e215b8078a284d026b7946c270",
+    type: "0xdeeb7a4662eec9f2f3def03fb937a663dddaa2e215b8078a284d026b7946c270::deep::DEEP",
     scalar: 1e6,
   },
   DBUSDC: {
-    address: '0xf7152c05930480cd740d7311b5b8b45c6f488e3a53a11c3f74a6fac36a52e0d7',
-    type: '0xf7152c05930480cd740d7311b5b8b45c6f488e3a53a11c3f74a6fac36a52e0d7::DBUSDC::DBUSDC',
+    address:
+      "0xf7152c05930480cd740d7311b5b8b45c6f488e3a53a11c3f74a6fac36a52e0d7",
+    type: "0xf7152c05930480cd740d7311b5b8b45c6f488e3a53a11c3f74a6fac36a52e0d7::DBUSDC::DBUSDC",
     scalar: 1e6,
   },
   DBUSDT: {
-    address: '0xf7152c05930480cd740d7311b5b8b45c6f488e3a53a11c3f74a6fac36a52e0d7',
-    type: '0xf7152c05930480cd740d7311b5b8b45c6f488e3a53a11c3f74a6fac36a52e0d7::DBUSDT::DBUSDT',
+    address:
+      "0xf7152c05930480cd740d7311b5b8b45c6f488e3a53a11c3f74a6fac36a52e0d7",
+    type: "0xf7152c05930480cd740d7311b5b8b45c6f488e3a53a11c3f74a6fac36a52e0d7::DBUSDT::DBUSDT",
     scalar: 1e6,
   },
 };
@@ -113,53 +123,63 @@ export const TESTNET_COINS: CoinMapType = {
 // Mainnet Coins
 export const MAINNET_COINS: CoinMapType = {
   SUI: {
-    address: '0x0000000000000000000000000000000000000000000000000000000000000002',
-    type: '0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI',
+    address:
+      "0x0000000000000000000000000000000000000000000000000000000000000002",
+    type: "0x0000000000000000000000000000000000000000000000000000000000000002::sui::SUI",
     scalar: 1e9,
   },
   DEEP: {
-    address: '0xdeeb7a4662eec9f2f3def03fb937a663dddaa2e215b8078a284d026b7946c270',
-    type: '0xdeeb7a4662eec9f2f3def03fb937a663dddaa2e215b8078a284d026b7946c270::deep::DEEP',
+    address:
+      "0xdeeb7a4662eec9f2f3def03fb937a663dddaa2e215b8078a284d026b7946c270",
+    type: "0xdeeb7a4662eec9f2f3def03fb937a663dddaa2e215b8078a284d026b7946c270::deep::DEEP",
     scalar: 1e6,
   },
   USDC: {
-    address: '0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7',
-    type: '0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC',
+    address:
+      "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7",
+    type: "0xdba34672e30cb065b1f93e3ab55318768fd6fef66c15942c9f7cb846e2f900e7::usdc::USDC",
     scalar: 1e6,
   },
   WUSDC: {
-    address: '0x5d4b302506645c37ff133b98c4b50a5ae14841659738d6d733d59d0d217a93bf',
-    type: '0x5d4b302506645c37ff133b98c4b50a5ae14841659738d6d733d59d0d217a93bf::coin::COIN',
+    address:
+      "0x5d4b302506645c37ff133b98c4b50a5ae14841659738d6d733d59d0d217a93bf",
+    type: "0x5d4b302506645c37ff133b98c4b50a5ae14841659738d6d733d59d0d217a93bf::coin::COIN",
     scalar: 1e6,
   },
   WUSDT: {
-    address: '0xc060006111016b8a020ad5b33834984a437aaa7d3c74c18e09a95d48aceab08c',
-    type: '0xc060006111016b8a020ad5b33834984a437aaa7d3c74c18e09a95d48aceab08c::coin::COIN',
+    address:
+      "0xc060006111016b8a020ad5b33834984a437aaa7d3c74c18e09a95d48aceab08c",
+    type: "0xc060006111016b8a020ad5b33834984a437aaa7d3c74c18e09a95d48aceab08c::coin::COIN",
     scalar: 1e6,
   },
   BETH: {
-    address: '0xd0e89b2af5e4910726fbcd8b8dd37bb79b29e5f83f7491bca830e94f7f226d29',
-    type: '0xd0e89b2af5e4910726fbcd8b8dd37bb79b29e5f83f7491bca830e94f7f226d29::eth::ETH',
+    address:
+      "0xd0e89b2af5e4910726fbcd8b8dd37bb79b29e5f83f7491bca830e94f7f226d29",
+    type: "0xd0e89b2af5e4910726fbcd8b8dd37bb79b29e5f83f7491bca830e94f7f226d29::eth::ETH",
     scalar: 1e8,
   },
   NS: {
-    address: '0x5145494a5f5100e645e4b0aa950fa6b68f614e8c59e17bc5ded3495123a79178',
-    type: '0x5145494a5f5100e645e4b0aa950fa6b68f614e8c59e17bc5ded3495123a79178::ns::NS',
+    address:
+      "0x5145494a5f5100e645e4b0aa950fa6b68f614e8c59e17bc5ded3495123a79178",
+    type: "0x5145494a5f5100e645e4b0aa950fa6b68f614e8c59e17bc5ded3495123a79178::ns::NS",
     scalar: 1e6,
   },
   TYPUS: {
-    address: '0xf82dc05634970553615eef6112a1ac4fb7bf10272bf6cbe0f80ef44a6c489385',
-    type: '0xf82dc05634970553615eef6112a1ac4fb7bf10272bf6cbe0f80ef44a6c489385::typus::TYPUS',
+    address:
+      "0xf82dc05634970553615eef6112a1ac4fb7bf10272bf6cbe0f80ef44a6c489385",
+    type: "0xf82dc05634970553615eef6112a1ac4fb7bf10272bf6cbe0f80ef44a6c489385::typus::TYPUS",
     scalar: 1e9,
   },
   WAL: {
-    address: '0x356a26eb9e012a68958082340d4c4116e7f55615cf27affcff209cf0ae544f59',
-    type: '0x356a26eb9e012a68958082340d4c4116e7f55615cf27affcff209cf0ae544f59::wal::WAL',
+    address:
+      "0x356a26eb9e012a68958082340d4c4116e7f55615cf27affcff209cf0ae544f59",
+    type: "0x356a26eb9e012a68958082340d4c4116e7f55615cf27affcff209cf0ae544f59::wal::WAL",
     scalar: 1e9,
   },
   xBTC: {
-    address: '0x876a4b7bce8aeaef60464c11f4026903e9afacab79b9b142686158aa86560b50',
-    type: '0x876a4b7bce8aeaef60464c11f4026903e9afacab79b9b142686158aa86560b50::xbtc::XBTC',
+    address:
+      "0x876a4b7bce8aeaef60464c11f4026903e9afacab79b9b142686158aa86560b50",
+    type: "0x876a4b7bce8aeaef60464c11f4026903e9afacab79b9b142686158aa86560b50::xbtc::XBTC",
     scalar: 1e8,
   },
 };
@@ -169,53 +189,59 @@ export const MAINNET_COINS: CoinMapType = {
 // Testnet Pools (using DBUSDC, DBUSDT)
 export const TESTNET_POOLS: PoolMapType = {
   SUI_DBUSDC: {
-    address: '0x0', // Will be populated from SDK defaults
-    baseCoin: 'SUI',
-    quoteCoin: 'DBUSDC',
+    address: "0x0", // Will be populated from SDK defaults
+    baseCoin: "SUI",
+    quoteCoin: "DBUSDC",
   },
   DEEP_DBUSDC: {
-    address: '0x0',
-    baseCoin: 'DEEP',
-    quoteCoin: 'DBUSDC',
+    address: "0x0",
+    baseCoin: "DEEP",
+    quoteCoin: "DBUSDC",
   },
   DEEP_SUI: {
-    address: '0x0',
-    baseCoin: 'DEEP',
-    quoteCoin: 'SUI',
+    address: "0x0",
+    baseCoin: "DEEP",
+    quoteCoin: "SUI",
   },
 };
 
 // Mainnet Pools (real liquidity)
 export const MAINNET_POOLS: PoolMapType = {
   DEEP_SUI: {
-    address: '0x9e69acc3f390cc83cc61e0a71c6b1ad0ceb2a116e1d51ba66a5c05a84a8a7e4c',
-    baseCoin: 'DEEP',
-    quoteCoin: 'SUI',
+    address:
+      "0x9e69acc3f390cc83cc61e0a71c6b1ad0ceb2a116e1d51ba66a5c05a84a8a7e4c",
+    baseCoin: "DEEP",
+    quoteCoin: "SUI",
   },
   DEEP_USDC: {
-    address: '0x21dfe7a0c31fead3a7cdc41d16c89a37fcf66a01e5cf45e08a0dcb7c3e7f7d8b',
-    baseCoin: 'DEEP',
-    quoteCoin: 'USDC',
+    address:
+      "0x21dfe7a0c31fead3a7cdc41d16c89a37fcf66a01e5cf45e08a0dcb7c3e7f7d8b",
+    baseCoin: "DEEP",
+    quoteCoin: "USDC",
   },
   SUI_USDC: {
-    address: '0xe05dafb5133bcffb8d59f4e12465dc0e9faeaa05e3e342a08fe135800e3e4407',
-    baseCoin: 'SUI',
-    quoteCoin: 'USDC',
+    address:
+      "0xe05dafb5133bcffb8d59f4e12465dc0e9faeaa05e3e342a08fe135800e3e4407",
+    baseCoin: "SUI",
+    quoteCoin: "USDC",
   },
   BETH_USDC: {
-    address: '0x1ebc38e8cbed7b2e3a0c2d3c5a0b6c47f8a8f9d7e6c5b4a3f2e1d0c9b8a7f6e5',
-    baseCoin: 'BETH',
-    quoteCoin: 'USDC',
+    address:
+      "0x1ebc38e8cbed7b2e3a0c2d3c5a0b6c47f8a8f9d7e6c5b4a3f2e1d0c9b8a7f6e5",
+    baseCoin: "BETH",
+    quoteCoin: "USDC",
   },
   WAL_USDC: {
-    address: '0x2ebc38e8cbed7b2e3a0c2d3c5a0b6c47f8a8f9d7e6c5b4a3f2e1d0c9b8a7f6e5',
-    baseCoin: 'WAL',
-    quoteCoin: 'USDC',
+    address:
+      "0x2ebc38e8cbed7b2e3a0c2d3c5a0b6c47f8a8f9d7e6c5b4a3f2e1d0c9b8a7f6e5",
+    baseCoin: "WAL",
+    quoteCoin: "USDC",
   },
   WAL_SUI: {
-    address: '0x3ebc38e8cbed7b2e3a0c2d3c5a0b6c47f8a8f9d7e6c5b4a3f2e1d0c9b8a7f6e5',
-    baseCoin: 'WAL',
-    quoteCoin: 'SUI',
+    address:
+      "0x3ebc38e8cbed7b2e3a0c2d3c5a0b6c47f8a8f9d7e6c5b4a3f2e1d0c9b8a7f6e5",
+    baseCoin: "WAL",
+    quoteCoin: "SUI",
   },
 };
 
@@ -243,8 +269,8 @@ export interface LimitOrderParams {
   quantity: number;
   isBid: boolean;
   expiration?: number;
-  orderType?: 'GTC' | 'IOC' | 'FOK' | 'POST_ONLY';
-  selfMatchingOption?: 'CANCEL_TAKER' | 'CANCEL_MAKER' | 'CANCEL_BOTH';
+  orderType?: "GTC" | "IOC" | "FOK" | "POST_ONLY";
+  selfMatchingOption?: "CANCEL_TAKER" | "CANCEL_MAKER" | "CANCEL_BOTH";
   payWithDeep?: boolean;
 }
 
@@ -263,7 +289,8 @@ export interface BalanceManagerInfo {
 // ============== DeepBook Trading Client ==============
 
 export class DeepBookTradingClient {
-  private client: ClientWithExtensions<{ deepbook: DeepBookClient }> | null = null;
+  private client: ClientWithExtensions<{ deepbook: DeepBookClient }> | null =
+    null;
   private suiClient: SuiClient;
   private env: NetworkEnv;
   private address: string;
@@ -273,10 +300,10 @@ export class DeepBookTradingClient {
     this.env = config.env;
     this.address = config.address;
     this.balanceManagers = config.balanceManagers || {};
-    
-    this.suiClient = new SuiJsonRpcClient({ 
+
+    this.suiClient = new SuiJsonRpcClient({
       url: NETWORK_CONFIG[config.env].rpcUrl,
-      network: config.env === 'mainnet' ? 'mainnet' : 'testnet',
+      network: config.env === "mainnet" ? "mainnet" : "testnet",
     });
   }
 
@@ -286,7 +313,7 @@ export class DeepBookTradingClient {
   async initialize(): Promise<void> {
     // Note: In browser environment, we use a different approach
     // The client will be initialized when signing transactions
-    console.log('DeepBook client initialized for', this.env);
+    console.log("DeepBook client initialized for", this.env);
   }
 
   /**
@@ -300,14 +327,14 @@ export class DeepBookTradingClient {
    * Get coins for the current network
    */
   getCoins(): CoinMapType {
-    return this.env === 'mainnet' ? MAINNET_COINS : TESTNET_COINS;
+    return this.env === "mainnet" ? MAINNET_COINS : TESTNET_COINS;
   }
 
   /**
    * Get pools for the current network
    */
   getPools(): PoolMapType {
-    return this.env === 'mainnet' ? MAINNET_POOLS : TESTNET_POOLS;
+    return this.env === "mainnet" ? MAINNET_POOLS : TESTNET_POOLS;
   }
 
   /**
@@ -344,15 +371,12 @@ export class DeepBookTradingClient {
     tx: Transaction,
     balanceManagerId: string,
     coinType: string,
-    coinObject: any
+    coinObject: any,
   ): void {
     tx.moveCall({
       target: `${DEEPBOOK_CONFIG[this.env].PACKAGE_ID}::balance_manager::deposit`,
       typeArguments: [coinType],
-      arguments: [
-        tx.object(balanceManagerId),
-        coinObject,
-      ],
+      arguments: [tx.object(balanceManagerId), coinObject],
     });
   }
 
@@ -363,15 +387,12 @@ export class DeepBookTradingClient {
     tx: Transaction,
     balanceManagerId: string,
     coinType: string,
-    amount: bigint
+    amount: bigint,
   ): any {
     return tx.moveCall({
       target: `${DEEPBOOK_CONFIG[this.env].PACKAGE_ID}::balance_manager::withdraw`,
       typeArguments: [coinType],
-      arguments: [
-        tx.object(balanceManagerId),
-        tx.pure.u64(amount),
-      ],
+      arguments: [tx.object(balanceManagerId), tx.pure.u64(amount)],
     });
   }
 
@@ -397,16 +418,16 @@ export class DeepBookTradingClient {
     poolKey: string,
     baseCoin: any,
     deepCoin: any,
-    minQuoteOut: bigint
+    minQuoteOut: bigint,
   ): [any, any, any] {
     const pools = this.getPools();
     const coins = this.getCoins();
     const pool = pools[poolKey];
     if (!pool) throw new Error(`Pool not found: ${poolKey}`);
-    
+
     const baseCoinType = coins[pool.baseCoin];
     const quoteCoinType = coins[pool.quoteCoin];
-    
+
     const result = tx.moveCall({
       target: `${DEEPBOOK_CONFIG[this.env].PACKAGE_ID}::pool::swap_exact_base_for_quote`,
       typeArguments: [baseCoinType.type, quoteCoinType.type],
@@ -415,7 +436,7 @@ export class DeepBookTradingClient {
         baseCoin,
         deepCoin,
         tx.pure.u64(minQuoteOut),
-        tx.object('0x6'), // Clock
+        tx.object("0x6"), // Clock
       ],
     });
     return result as unknown as [any, any, any];
@@ -430,16 +451,16 @@ export class DeepBookTradingClient {
     poolKey: string,
     quoteCoin: any,
     deepCoin: any,
-    minBaseOut: bigint
+    minBaseOut: bigint,
   ): [any, any, any] {
     const pools = this.getPools();
     const coins = this.getCoins();
     const pool = pools[poolKey];
     if (!pool) throw new Error(`Pool not found: ${poolKey}`);
-    
+
     const baseCoinType = coins[pool.baseCoin];
     const quoteCoinType = coins[pool.quoteCoin];
-    
+
     const result = tx.moveCall({
       target: `${DEEPBOOK_CONFIG[this.env].PACKAGE_ID}::pool::swap_exact_quote_for_base`,
       typeArguments: [baseCoinType.type, quoteCoinType.type],
@@ -448,7 +469,7 @@ export class DeepBookTradingClient {
         quoteCoin,
         deepCoin,
         tx.pure.u64(minBaseOut),
-        tx.object('0x6'), // Clock
+        tx.object("0x6"), // Clock
       ],
     });
     return result as unknown as [any, any, any];
@@ -469,7 +490,11 @@ export class DeepBookTradingClient {
   /**
    * Generate a trade proof using trade cap
    */
-  generateProofAsTrader(tx: Transaction, balanceManagerId: string, tradeCapId: string): any {
+  generateProofAsTrader(
+    tx: Transaction,
+    balanceManagerId: string,
+    tradeCapId: string,
+  ): any {
     return tx.moveCall({
       target: `${DEEPBOOK_CONFIG[this.env].PACKAGE_ID}::balance_manager::generate_proof_as_trader`,
       arguments: [tx.object(balanceManagerId), tx.object(tradeCapId)],
@@ -493,20 +518,22 @@ export class DeepBookTradingClient {
     quantity: number,
     isBid: boolean,
     payWithDeep: boolean,
-    expiration: bigint
+    expiration: bigint,
   ): any {
     const pools = this.getPools();
     const coins = this.getCoins();
     const pool = pools[poolKey];
     if (!pool) throw new Error(`Pool not found: ${poolKey}`);
-    
+
     const baseCoin = coins[pool.baseCoin];
     const quoteCoin = coins[pool.quoteCoin];
-    
+
     // Calculate price in pool units (matches SDK exactly)
-    const inputPrice = Math.round((price * FLOAT_SCALAR * quoteCoin.scalar) / baseCoin.scalar);
+    const inputPrice = Math.round(
+      (price * FLOAT_SCALAR * quoteCoin.scalar) / baseCoin.scalar,
+    );
     const inputQuantity = Math.round(quantity * baseCoin.scalar);
-    
+
     return tx.moveCall({
       target: `${DEEPBOOK_CONFIG[this.env].PACKAGE_ID}::pool::place_limit_order`,
       typeArguments: [baseCoin.type, quoteCoin.type],
@@ -522,7 +549,7 @@ export class DeepBookTradingClient {
         tx.pure.bool(isBid),
         tx.pure.bool(payWithDeep),
         tx.pure.u64(expiration),
-        tx.object('0x6'), // Clock
+        tx.object("0x6"), // Clock
       ],
     });
   }
@@ -539,17 +566,17 @@ export class DeepBookTradingClient {
     selfMatchingOption: number,
     quantity: number,
     isBid: boolean,
-    payWithDeep: boolean
+    payWithDeep: boolean,
   ): any {
     const pools = this.getPools();
     const coins = this.getCoins();
     const pool = pools[poolKey];
     if (!pool) throw new Error(`Pool not found: ${poolKey}`);
-    
+
     const baseCoin = coins[pool.baseCoin];
     const quoteCoin = coins[pool.quoteCoin];
     const inputQuantity = Math.round(quantity * baseCoin.scalar);
-    
+
     return tx.moveCall({
       target: `${DEEPBOOK_CONFIG[this.env].PACKAGE_ID}::pool::place_market_order`,
       typeArguments: [baseCoin.type, quoteCoin.type],
@@ -562,7 +589,7 @@ export class DeepBookTradingClient {
         tx.pure.u64(inputQuantity),
         tx.pure.bool(isBid),
         tx.pure.bool(payWithDeep),
-        tx.object('0x6'), // Clock
+        tx.object("0x6"), // Clock
       ],
     });
   }
@@ -575,16 +602,16 @@ export class DeepBookTradingClient {
     poolKey: string,
     balanceManagerId: string,
     tradeProof: any,
-    orderId: bigint
+    orderId: bigint,
   ): void {
     const pools = this.getPools();
     const coins = this.getCoins();
     const pool = pools[poolKey];
     if (!pool) throw new Error(`Pool not found: ${poolKey}`);
-    
+
     const baseCoin = coins[pool.baseCoin];
     const quoteCoin = coins[pool.quoteCoin];
-    
+
     tx.moveCall({
       target: `${DEEPBOOK_CONFIG[this.env].PACKAGE_ID}::pool::cancel_order`,
       typeArguments: [baseCoin.type, quoteCoin.type],
@@ -593,7 +620,7 @@ export class DeepBookTradingClient {
         tx.object(balanceManagerId),
         tradeProof,
         tx.pure.u128(orderId),
-        tx.object('0x6'), // Clock
+        tx.object("0x6"), // Clock
       ],
     });
   }
@@ -605,16 +632,16 @@ export class DeepBookTradingClient {
     tx: Transaction,
     poolKey: string,
     balanceManagerId: string,
-    tradeProof: any
+    tradeProof: any,
   ): void {
     const pools = this.getPools();
     const coins = this.getCoins();
     const pool = pools[poolKey];
     if (!pool) throw new Error(`Pool not found: ${poolKey}`);
-    
+
     const baseCoin = coins[pool.baseCoin];
     const quoteCoin = coins[pool.quoteCoin];
-    
+
     tx.moveCall({
       target: `${DEEPBOOK_CONFIG[this.env].PACKAGE_ID}::pool::cancel_all_orders`,
       typeArguments: [baseCoin.type, quoteCoin.type],
@@ -622,7 +649,7 @@ export class DeepBookTradingClient {
         tx.object(pool.address),
         tx.object(balanceManagerId),
         tradeProof,
-        tx.object('0x6'), // Clock
+        tx.object("0x6"), // Clock
       ],
     });
   }
@@ -636,24 +663,21 @@ export class DeepBookTradingClient {
   borrowFlashLoanBase(
     tx: Transaction,
     poolKey: string,
-    amount: number
+    amount: number,
   ): [any, any] {
     const pools = this.getPools();
     const coins = this.getCoins();
     const pool = pools[poolKey];
     if (!pool) throw new Error(`Pool not found: ${poolKey}`);
-    
+
     const baseCoin = coins[pool.baseCoin];
     const quoteCoin = coins[pool.quoteCoin];
     const inputQuantity = Math.round(amount * baseCoin.scalar);
-    
+
     const result = tx.moveCall({
       target: `${DEEPBOOK_CONFIG[this.env].PACKAGE_ID}::pool::borrow_flashloan_base`,
       typeArguments: [baseCoin.type, quoteCoin.type],
-      arguments: [
-        tx.object(pool.address),
-        tx.pure.u64(inputQuantity),
-      ],
+      arguments: [tx.object(pool.address), tx.pure.u64(inputQuantity)],
     });
     return result as unknown as [any, any];
   }
@@ -664,24 +688,21 @@ export class DeepBookTradingClient {
   borrowFlashLoanQuote(
     tx: Transaction,
     poolKey: string,
-    amount: number
+    amount: number,
   ): [any, any] {
     const pools = this.getPools();
     const coins = this.getCoins();
     const pool = pools[poolKey];
     if (!pool) throw new Error(`Pool not found: ${poolKey}`);
-    
+
     const baseCoin = coins[pool.baseCoin];
     const quoteCoin = coins[pool.quoteCoin];
     const inputQuantity = Math.round(amount * quoteCoin.scalar);
-    
+
     const result = tx.moveCall({
       target: `${DEEPBOOK_CONFIG[this.env].PACKAGE_ID}::pool::borrow_flashloan_quote`,
       typeArguments: [baseCoin.type, quoteCoin.type],
-      arguments: [
-        tx.object(pool.address),
-        tx.pure.u64(inputQuantity),
-      ],
+      arguments: [tx.object(pool.address), tx.pure.u64(inputQuantity)],
     });
     return result as unknown as [any, any];
   }
@@ -695,32 +716,28 @@ export class DeepBookTradingClient {
     poolKey: string,
     borrowAmount: number,
     baseCoinInput: any,
-    flashLoan: any
+    flashLoan: any,
   ): any {
     const pools = this.getPools();
     const coins = this.getCoins();
     const pool = pools[poolKey];
     if (!pool) throw new Error(`Pool not found: ${poolKey}`);
-    
+
     const baseCoin = coins[pool.baseCoin];
     const quoteCoin = coins[pool.quoteCoin];
     const borrowScalar = baseCoin.scalar;
-    
+
     // Split the exact amount to return
     const [baseCoinReturn] = tx.splitCoins(baseCoinInput, [
-      tx.pure.u64(Math.round(borrowAmount * borrowScalar))
+      tx.pure.u64(Math.round(borrowAmount * borrowScalar)),
     ]);
-    
+
     tx.moveCall({
       target: `${DEEPBOOK_CONFIG[this.env].PACKAGE_ID}::pool::return_flashloan_base`,
       typeArguments: [baseCoin.type, quoteCoin.type],
-      arguments: [
-        tx.object(pool.address),
-        baseCoinReturn,
-        flashLoan,
-      ],
+      arguments: [tx.object(pool.address), baseCoinReturn, flashLoan],
     });
-    
+
     // Return the remaining coin (profit)
     return baseCoinInput;
   }
@@ -733,32 +750,28 @@ export class DeepBookTradingClient {
     poolKey: string,
     borrowAmount: number,
     quoteCoinInput: any,
-    flashLoan: any
+    flashLoan: any,
   ): any {
     const pools = this.getPools();
     const coins = this.getCoins();
     const pool = pools[poolKey];
     if (!pool) throw new Error(`Pool not found: ${poolKey}`);
-    
+
     const baseCoin = coins[pool.baseCoin];
     const quoteCoin = coins[pool.quoteCoin];
     const borrowScalar = quoteCoin.scalar;
-    
+
     // Split the exact amount to return
     const [quoteCoinReturn] = tx.splitCoins(quoteCoinInput, [
-      tx.pure.u64(Math.round(borrowAmount * borrowScalar))
+      tx.pure.u64(Math.round(borrowAmount * borrowScalar)),
     ]);
-    
+
     tx.moveCall({
       target: `${DEEPBOOK_CONFIG[this.env].PACKAGE_ID}::pool::return_flashloan_quote`,
       typeArguments: [baseCoin.type, quoteCoin.type],
-      arguments: [
-        tx.object(pool.address),
-        quoteCoinReturn,
-        flashLoan,
-      ],
+      arguments: [tx.object(pool.address), quoteCoinReturn, flashLoan],
     });
-    
+
     // Return the remaining coin (profit)
     return quoteCoinInput;
   }
@@ -771,14 +784,14 @@ export class DeepBookTradingClient {
   async getMidPrice(poolId: string): Promise<number> {
     try {
       const response = await fetch(
-        `${NETWORK_CONFIG[this.env].indexerUrl}/get_mid_price?pool_id=${poolId}`
+        `${NETWORK_CONFIG[this.env].indexerUrl}/get_mid_price?pool_id=${poolId}`,
       );
       if (response.ok) {
         const data = await response.json();
         return parseFloat(data.mid_price);
       }
     } catch (error) {
-      console.warn('Failed to fetch mid price:', error);
+      console.warn("Failed to fetch mid price:", error);
     }
     return 0;
   }
@@ -789,13 +802,13 @@ export class DeepBookTradingClient {
   async getOrderBook(poolId: string, depth: number = 10): Promise<any> {
     try {
       const response = await fetch(
-        `${NETWORK_CONFIG[this.env].indexerUrl}/get_order_book?pool_id=${poolId}&depth=${depth}`
+        `${NETWORK_CONFIG[this.env].indexerUrl}/get_order_book?pool_id=${poolId}&depth=${depth}`,
       );
       if (response.ok) {
         return await response.json();
       }
     } catch (error) {
-      console.warn('Failed to fetch order book:', error);
+      console.warn("Failed to fetch order book:", error);
     }
     return { bids: [], asks: [] };
   }
@@ -806,11 +819,11 @@ export class DeepBookTradingClient {
   async getAmountOut(
     poolId: string,
     baseIn: boolean,
-    amount: bigint
+    amount: bigint,
   ): Promise<{ amountOut: bigint; deepRequired: bigint }> {
     try {
       const response = await fetch(
-        `${NETWORK_CONFIG[this.env].indexerUrl}/get_amount_out?pool_id=${poolId}&base_in=${baseIn}&amount=${amount}`
+        `${NETWORK_CONFIG[this.env].indexerUrl}/get_amount_out?pool_id=${poolId}&base_in=${baseIn}&amount=${amount}`,
       );
       if (response.ok) {
         const data = await response.json();
@@ -820,7 +833,7 @@ export class DeepBookTradingClient {
         };
       }
     } catch (error) {
-      console.warn('Failed to get amount out:', error);
+      console.warn("Failed to get amount out:", error);
     }
     return { amountOut: BigInt(0), deepRequired: BigInt(0) };
   }
@@ -830,18 +843,18 @@ export class DeepBookTradingClient {
    */
   async getManagerBalance(
     balanceManagerId: string,
-    coinType: string
+    coinType: string,
   ): Promise<bigint> {
     try {
       const result = await this.suiClient.getDynamicFieldObject({
         parentId: balanceManagerId,
-        name: { type: '0x1::type_name::TypeName', value: coinType },
+        name: { type: "0x1::type_name::TypeName", value: coinType },
       });
-      if (result.data?.content && 'fields' in result.data.content) {
+      if (result.data?.content && "fields" in result.data.content) {
         return BigInt((result.data.content.fields as any).balance || 0);
       }
     } catch (error) {
-      console.warn('Failed to get manager balance:', error);
+      console.warn("Failed to get manager balance:", error);
     }
     return BigInt(0);
   }
@@ -855,7 +868,7 @@ export class DeepBookTradingClient {
 export function createDeepBookClient(
   env: NetworkEnv,
   address: string,
-  balanceManagers?: { [key: string]: BalanceManager }
+  balanceManagers?: { [key: string]: BalanceManager },
 ): DeepBookTradingClient {
   return new DeepBookTradingClient({
     env,
@@ -870,7 +883,7 @@ export function createDeepBookClient(
 export async function fetchPriceWithFallback(
   client: DeepBookTradingClient,
   poolId: string,
-  fallback: number = 1.0
+  fallback: number = 1.0,
 ): Promise<number> {
   const price = await client.getMidPrice(poolId);
   return price > 0 ? price : fallback;
@@ -887,12 +900,24 @@ export function buildSwapTransaction(
   quoteCoin: any,
   deepCoin: any,
   isBaseToQuote: boolean,
-  minOut: bigint
+  minOut: bigint,
 ): [any, any, any] {
   if (isBaseToQuote) {
-    return client.swapExactBaseForQuote(tx, poolKey, baseCoin, deepCoin, minOut);
+    return client.swapExactBaseForQuote(
+      tx,
+      poolKey,
+      baseCoin,
+      deepCoin,
+      minOut,
+    );
   } else {
-    return client.swapExactQuoteForBase(tx, poolKey, quoteCoin, deepCoin, minOut);
+    return client.swapExactQuoteForBase(
+      tx,
+      poolKey,
+      quoteCoin,
+      deepCoin,
+      minOut,
+    );
   }
 }
 
@@ -909,16 +934,24 @@ export function buildFlashLoanArbitrage(
   borrowAmount: number,
   borrowBase: boolean,
   deepCoin: any,
-  minProfit: bigint = BigInt(0)
+  minProfit: bigint = BigInt(0),
 ): void {
   // 1. Borrow from first pool
   let borrowedCoin: any;
   let flashLoan: any;
-  
+
   if (borrowBase) {
-    [borrowedCoin, flashLoan] = client.borrowFlashLoanBase(tx, borrowPoolKey, borrowAmount);
+    [borrowedCoin, flashLoan] = client.borrowFlashLoanBase(
+      tx,
+      borrowPoolKey,
+      borrowAmount,
+    );
   } else {
-    [borrowedCoin, flashLoan] = client.borrowFlashLoanQuote(tx, borrowPoolKey, borrowAmount);
+    [borrowedCoin, flashLoan] = client.borrowFlashLoanQuote(
+      tx,
+      borrowPoolKey,
+      borrowAmount,
+    );
   }
 
   // 2. Swap in second pool to get profit
@@ -933,23 +966,32 @@ export function buildFlashLoanArbitrage(
       swapPoolKey,
       borrowedCoin,
       deepCoin,
-      minProfit
+      minProfit,
     );
-    
+
     // Swap quote back to base to repay
     const [returnBase, , returnDeep] = client.swapExactQuoteForBase(
       tx,
       borrowPoolKey,
       swappedQuote,
       swappedDeep,
-      BigInt(Math.round(borrowAmount * 1e9)) // Approximate return amount
+      BigInt(Math.round(borrowAmount * 1e9)), // Approximate return amount
     );
-    
+
     // Return flash loan
-    const remainder = client.returnFlashLoanBase(tx, borrowPoolKey, borrowAmount, returnBase, flashLoan);
-    
+    const remainder = client.returnFlashLoanBase(
+      tx,
+      borrowPoolKey,
+      borrowAmount,
+      returnBase,
+      flashLoan,
+    );
+
     // Transfer remainder (profit) to sender
-    tx.transferObjects([remainder, returnDeep, swappedBase], tx.pure.address(client['address']));
+    tx.transferObjects(
+      [remainder, returnDeep, swappedBase],
+      tx.pure.address(client["address"]),
+    );
   } else {
     // Borrowed quote, swap for base
     [swappedBase, swappedQuote, swappedDeep] = client.swapExactQuoteForBase(
@@ -957,23 +999,32 @@ export function buildFlashLoanArbitrage(
       swapPoolKey,
       borrowedCoin,
       deepCoin,
-      minProfit
+      minProfit,
     );
-    
+
     // Swap base back to quote to repay
     const [, returnQuote, returnDeep] = client.swapExactBaseForQuote(
       tx,
       borrowPoolKey,
       swappedBase,
       swappedDeep,
-      BigInt(Math.round(borrowAmount * 1e6)) // Approximate return amount
+      BigInt(Math.round(borrowAmount * 1e6)), // Approximate return amount
     );
-    
+
     // Return flash loan
-    const remainder = client.returnFlashLoanQuote(tx, borrowPoolKey, borrowAmount, returnQuote, flashLoan);
-    
+    const remainder = client.returnFlashLoanQuote(
+      tx,
+      borrowPoolKey,
+      borrowAmount,
+      returnQuote,
+      flashLoan,
+    );
+
     // Transfer remainder (profit) to sender
-    tx.transferObjects([remainder, returnDeep, swappedQuote], tx.pure.address(client['address']));
+    tx.transferObjects(
+      [remainder, returnDeep, swappedQuote],
+      tx.pure.address(client["address"]),
+    );
   }
 }
 
