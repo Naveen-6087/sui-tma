@@ -35,6 +35,7 @@ import Image from "next/image";
 const navigation = [
   { name: "Home", href: "/" },
   { name: "Trade", href: "/trade" },
+  { name: "Agent", href: "/agent" },
   { name: "Indexer", href: "/indexer" },
 ];
 

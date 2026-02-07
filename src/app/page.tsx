@@ -9,6 +9,7 @@ import {
   ArrowRight,
   BarChart3,
   TrendingUp,
+  Bot,
 } from "lucide-react";
 import Image from "next/image";
 
@@ -83,6 +84,18 @@ export default function Home() {
             >
               <BarChart3 className="w-5 h-5" />
               View Indexer
+              <ArrowRight className="w-4 h-4" />
+            </Button>
+          </Link>
+
+          <Link href="/agent">
+            <Button
+              variant="outline"
+              size="lg"
+              className="w-full sm:w-auto flex items-center gap-2"
+            >
+              <Bot className="w-5 h-5" />
+              AI Agent
               <ArrowRight className="w-4 h-4" />
             </Button>
           </Link>
