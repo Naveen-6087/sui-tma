@@ -134,6 +134,73 @@ function buildKeyboard(suggestedActions?: string[]) {
   return { inline_keyboard: rows };
 }
 
+/**
+ * Send an agent response to the user.
+ * Intercepts `deposit_needed` responses for `/connect` users and sends
+ * a "Sign Deposit" button that opens the sign-deposit Mini App page
+ * instead of just an "approve in your wallet" message.
+ */
+async function sendAgentResponse(chatId: number, response: AgentResponse) {
+  const opts = getAgentOpts(chatId.toString());
+  const isClientSign = opts.executionMode === 'client-sign';
+
+  if (response.type === 'deposit_needed' && isClientSign && response.data) {
+    const sig = createLinkSignature(chatId.toString());
+    const data = response.data;
+
+    // Build sign-deposit URL with deposit params
+    const params = new URLSearchParams({
+      chatId: chatId.toString(),
+      sig,
+      depositAddress: String(data.depositAddress || ''),
+      amount: String(data.amount || ''),
+      originAsset: String(data.originAsset || ''),
+      tokenSymbol: String(data.tokenSymbol || data.tokenInSymbol || ''),
+      amountFormatted: String(data.amountFormatted || data.amountIn || ''),
+      tokenOut: String(data.tokenOutSymbol || ''),
+      amountOut: String(data.quote && typeof data.quote === 'object' && 'amountOutFormatted' in data.quote
+        ? data.quote.amountOutFormatted
+        : data.amountOut || ''),
+    });
+
+    const signUrl = `${APP_URL}/telegram/sign-deposit?${params.toString()}`;
+
+    // Send a nicer message with a "Sign Deposit" button
+    const text =
+      `💳 *Deposit Required*\n\n` +
+      `To complete your swap, please sign the deposit transaction with your NEAR wallet.\n\n` +
+      `• *Send:* ${data.amountFormatted || data.amountIn} ${data.tokenSymbol || data.tokenInSymbol}\n` +
+      `• *Receive:* ~${data.quote && typeof data.quote === 'object' && 'amountOutFormatted' in data.quote ? data.quote.amountOutFormatted : data.amountOut || '?'} ${data.tokenOutSymbol || '?'}\n` +
+      `• *Deposit to:* \`${data.depositAddress}\`\n\n` +
+      `Tap the button below to sign with your connected wallet:`;
+
+    await sendMessage(chatId, text, {
+      reply_markup: {
+        inline_keyboard: [
+          [
+            {
+              text: '✅ Sign & Send Deposit',
+              web_app: { url: signUrl },
+            },
+          ],
+          [
+            {
+              text: '🌐 Open in Browser',
+              url: signUrl,
+            },
+          ],
+        ],
+      },
+    });
+    return;
+  }
+
+  // Default: send as formatted text with suggested actions
+  await sendMessage(chatId, truncate(formatForTelegram(response)), {
+    reply_markup: buildKeyboard(response.suggestedActions),
+  });
+}
+
 // ============== Command Handlers ==============
 
 async function handleStart(chatId: number) {
@@ -203,11 +270,7 @@ async function handleSwapCommand(chatId: number, args: string) {
   const agent = getOrCreateAgent(chatId.toString());
   const opts = getAgentOpts(chatId.toString());
   const response = await agent.processMessage(`swap ${args}`, opts);
-  const text = formatForTelegram(response);
-
-  await sendMessage(chatId, truncate(text), {
-    reply_markup: buildKeyboard(response.suggestedActions),
-  });
+  await sendAgentResponse(chatId, response);
 }
 
 async function handleWalletCommand(chatId: number, address: string) {
@@ -294,9 +357,7 @@ async function handleUpdate(update: Record<string, unknown>) {
 
     await sendChatAction(chatId);
     const response = await agent.processMessage(actionText, opts);
-    await sendMessage(chatId, truncate(formatForTelegram(response)), {
-      reply_markup: buildKeyboard(response.suggestedActions),
-    });
+    await sendAgentResponse(chatId, response);
     return;
   }
 
@@ -346,9 +407,7 @@ async function handleUpdate(update: Record<string, unknown>) {
     const agent = getOrCreateAgent(chatId.toString());
     const opts = getAgentOpts(chatId.toString());
     const response = await agent.processMessage("help", opts);
-    await sendMessage(chatId, truncate(formatForTelegram(response)), {
-      reply_markup: buildKeyboard(response.suggestedActions),
-    });
+    await sendAgentResponse(chatId, response);
     return;
   }
 
@@ -390,9 +449,7 @@ async function handleUpdate(update: Record<string, unknown>) {
     const agent = getOrCreateAgent(chatId.toString());
     const opts = getAgentOpts(chatId.toString());
     const response = await agent.processMessage(query, opts);
-    await sendMessage(chatId, truncate(formatForTelegram(response)), {
-      reply_markup: buildKeyboard(response.suggestedActions),
-    });
+    await sendAgentResponse(chatId, response);
     return;
   }
 
@@ -409,9 +466,7 @@ async function handleUpdate(update: Record<string, unknown>) {
     const agent = getOrCreateAgent(chatId.toString());
     const opts = getAgentOpts(chatId.toString());
     const response = await agent.processMessage(`status ${depositAddr}`, opts);
-    await sendMessage(chatId, truncate(formatForTelegram(response)), {
-      reply_markup: buildKeyboard(response.suggestedActions),
-    });
+    await sendAgentResponse(chatId, response);
     return;
   }
 
@@ -503,18 +558,16 @@ async function handleUpdate(update: Record<string, unknown>) {
   const agent = getOrCreateAgent(chatId.toString());
   const opts = getAgentOpts(chatId.toString());
   const response = await agent.processMessage(text, opts);
-
-  await sendMessage(chatId, truncate(formatForTelegram(response)), {
-    reply_markup: buildKeyboard(response.suggestedActions),
-  });
+  await sendAgentResponse(chatId, response);
 }
 
 // ============== /connect Command =============================
 
 async function handleConnectCommand(chatId: number) {
   const sig = createLinkSignature(chatId.toString());
-  const webLinkUrl = `${APP_URL}/telegram/link-wallet?chatId=${chatId}&sig=${sig}`;
-  const miniAppUrl = `${APP_URL}/telegram/connect-wallet`;
+  const connectParams = `chatId=${chatId}&sig=${sig}`;
+  const webLinkUrl = `${APP_URL}/telegram/link-wallet?${connectParams}`;
+  const miniAppUrl = `${APP_URL}/telegram/connect-wallet?${connectParams}`;
 
   // Check if already connected
   const existing = nearAccounts.get(chatId.toString());

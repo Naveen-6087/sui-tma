@@ -99,6 +99,79 @@ function buildKeyboard(suggestedActions?: string[]) {
   return { inline_keyboard: rows };
 }
 
+/**
+ * Send an agent response, intercepting deposit_needed for client-sign users.
+ * Opens a sign-deposit Mini App page instead of showing "approve in wallet".
+ */
+async function replyWithAgentResponse(
+  ctx: BotContext,
+  chatId: string,
+  response: AgentResponse,
+) {
+  const opts = getAgentOptsFromStore(chatId);
+  const isClientSign = opts.executionMode === 'client-sign';
+
+  if (response.type === 'deposit_needed' && isClientSign && response.data) {
+    const sig = createLinkSignature(chatId);
+    const data = response.data;
+
+    const params = new URLSearchParams({
+      chatId,
+      sig,
+      depositAddress: String(data.depositAddress || ''),
+      amount: String(data.amount || ''),
+      originAsset: String(data.originAsset || ''),
+      tokenSymbol: String(data.tokenSymbol || data.tokenInSymbol || ''),
+      amountFormatted: String(data.amountFormatted || data.amountIn || ''),
+      tokenOut: String(data.tokenOutSymbol || ''),
+      amountOut: String(
+        data.quote &&
+          typeof data.quote === 'object' &&
+          'amountOutFormatted' in data.quote
+          ? data.quote.amountOutFormatted
+          : data.amountOut || '',
+      ),
+    });
+
+    const signUrl = `${APP_URL}/telegram/sign-deposit?${params.toString()}`;
+
+    const text =
+      `💳 *Deposit Required*\n\n` +
+      `To complete your swap, sign the deposit with your NEAR wallet.\n\n` +
+      `• *Send:* ${data.amountFormatted || data.amountIn} ${data.tokenSymbol || data.tokenInSymbol}\n` +
+      `• *Receive:* ~${
+        data.quote &&
+        typeof data.quote === 'object' &&
+        'amountOutFormatted' in data.quote
+          ? data.quote.amountOutFormatted
+          : data.amountOut || '?'
+      } ${data.tokenOutSymbol || '?'}\n` +
+      `• *Deposit to:* \`${data.depositAddress}\`\n\n` +
+      `Tap the button below to sign with your connected wallet:`;
+
+    await ctx.reply(text, {
+      parse_mode: 'Markdown',
+      reply_markup: {
+        inline_keyboard: [
+          [{ text: '✅ Sign & Send Deposit', web_app: { url: signUrl } }],
+          [{ text: '🌐 Open in Browser', url: signUrl }],
+        ],
+      },
+    });
+    return;
+  }
+
+  // Default: send formatted text with suggested actions
+  let text = formatForTelegram(response);
+  if (text.length > 4000) {
+    text = text.slice(0, 3950) + '\n\n_...message truncated_';
+  }
+  await ctx.reply(text, {
+    parse_mode: 'Markdown',
+    reply_markup: buildKeyboard(response.suggestedActions),
+  });
+}
+
 // ============== Bot Setup ==============
 
 export function createTradingBot(token: string): Bot<BotContext> {
@@ -169,10 +242,7 @@ export function createTradingBot(token: string): Bot<BotContext> {
     const chatId = ctx.chat.id.toString();
     const agent = getOrCreateAgent(chatId);
     const response = await agent.processMessage("help", getAgentOptions(chatId, ctx.session.walletAddress));
-    await ctx.reply(formatForTelegram(response), {
-      parse_mode: "Markdown",
-      reply_markup: buildKeyboard(response.suggestedActions),
-    });
+    await replyWithAgentResponse(ctx, chatId, response);
   });
 
   // ─── /tokens [chain] ───────────────────────────────
@@ -186,17 +256,7 @@ export function createTradingBot(token: string): Bot<BotContext> {
 
     const query = chain ? `tokens on ${chain}` : "tokens";
     const response = await agent.processMessage(query, getAgentOptions(chatId, ctx.session.walletAddress));
-    let text = formatForTelegram(response);
-
-    // Telegram messages max 4096 chars
-    if (text.length > 4000) {
-      text = text.slice(0, 3950) + "\n\n_...truncated. Try /tokens sui_";
-    }
-
-    await ctx.reply(text, {
-      parse_mode: "Markdown",
-      reply_markup: buildKeyboard(response.suggestedActions),
-    });
+    await replyWithAgentResponse(ctx, chatId, response);
   });
 
   // ─── /swap <natural language> ──────────────────────
@@ -232,11 +292,7 @@ export function createTradingBot(token: string): Bot<BotContext> {
       `swap ${args}`,
       getAgentOptions(chatId, ctx.session.walletAddress),
     );
-
-    await ctx.reply(formatForTelegram(response), {
-      parse_mode: "Markdown",
-      reply_markup: buildKeyboard(response.suggestedActions),
-    });
+    await replyWithAgentResponse(ctx, chatId, response);
   });
 
   // ─── /status [depositAddress] ──────────────────────
@@ -260,11 +316,7 @@ export function createTradingBot(token: string): Bot<BotContext> {
       `status ${depositAddress}`,
       getAgentOptions(chatId, ctx.session.walletAddress),
     );
-
-    await ctx.reply(formatForTelegram(response), {
-      parse_mode: "Markdown",
-      reply_markup: buildKeyboard(response.suggestedActions),
-    });
+    await replyWithAgentResponse(ctx, chatId, response);
   });
 
   // ─── /wallet <address> ─────────────────────────────
@@ -416,8 +468,9 @@ export function createTradingBot(token: string): Bot<BotContext> {
   bot.command("connect", async (ctx) => {
     const chatId = ctx.chat.id.toString();
     const sig = createLinkSignature(chatId);
-    const webLinkUrl = `${APP_URL}/telegram/link-wallet?chatId=${chatId}&sig=${sig}`;
-    const miniAppUrl = `${APP_URL}/telegram/connect-wallet`;
+    const connectParams = `chatId=${chatId}&sig=${sig}`;
+    const webLinkUrl = `${APP_URL}/telegram/link-wallet?${connectParams}`;
+    const miniAppUrl = `${APP_URL}/telegram/connect-wallet?${connectParams}`;
 
     const existing = nearAccounts.get(chatId);
     const statusLine = existing
@@ -515,7 +568,8 @@ export function createTradingBot(token: string): Bot<BotContext> {
     if (data === 'agent:Connect NEAR') {
       const sig = createLinkSignature(chatId);
       const webLinkUrl = `${APP_URL}/telegram/link-wallet?chatId=${chatId}&sig=${sig}`;
-      const miniAppUrl = `${APP_URL}/telegram/connect-wallet`;
+      const sigCb = createLinkSignature(chatId);
+      const miniAppUrl = `${APP_URL}/telegram/connect-wallet?chatId=${chatId}&sig=${sigCb}`;
 
       await ctx.reply(
         `🔗 *Connect NEAR Wallet*\n\nChoose how to connect:`,
@@ -550,16 +604,8 @@ export function createTradingBot(token: string): Bot<BotContext> {
       getAgentOptions(chatId, ctx.session.walletAddress),
     );
 
-    let text = formatForTelegram(response);
-    if (text.length > 4000) {
-      text = text.slice(0, 3950) + "\n\n_...message truncated_";
-    }
-
     // Send as new message (editing can fail with different content types)
-    await ctx.reply(text, {
-      parse_mode: "Markdown",
-      reply_markup: buildKeyboard(response.suggestedActions),
-    });
+    await replyWithAgentResponse(ctx, chatId, response);
   });
 
   // ─── Natural language catch-all ────────────────────
@@ -581,15 +627,7 @@ export function createTradingBot(token: string): Bot<BotContext> {
       getAgentOptions(chatId, ctx.session.walletAddress),
     );
 
-    let text = formatForTelegram(response);
-    if (text.length > 4000) {
-      text = text.slice(0, 3950) + "\n\n_...message truncated_";
-    }
-
-    await ctx.reply(text, {
-      parse_mode: "Markdown",
-      reply_markup: buildKeyboard(response.suggestedActions),
-    });
+    await replyWithAgentResponse(ctx, chatId, response);
   });
 
   // ─── Error handling ────────────────────────────────
