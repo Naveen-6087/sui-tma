@@ -86,6 +86,20 @@ export function NearWalletProvider({ children }: PropsWithChildren) {
     if (initRef.current) return;
     initRef.current = true;
 
+    // ── SKIP wallet connector inside Telegram Mini App WebView ──
+    // NearConnector uses popups / inter-tab communication that Telegram's
+    // restricted WebView doesn't support.  The auto-reconnect attempt
+    // causes the wallet to get stuck on "Receiving details from Dapp".
+    // TMA pages use manual account-id input or redirect to the system
+    // browser for signing, so the connector is not needed there.
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const tgWebApp = (window as any).Telegram?.WebApp;
+    if (tgWebApp && (tgWebApp.initData || tgWebApp.platform)) {
+      console.log('[NearWallet] Skipping NearConnector init — running inside Telegram WebView');
+      setIsLoading(false);
+      return;
+    }
+
     (async () => {
       try {
         // Dynamic import so Next.js never tries to SSR this

@@ -64,6 +64,14 @@ declare global {
 
 type SignStatus = 'idle' | 'signing' | 'submitting' | 'success' | 'error';
 
+/** Synchronous TMA check — safe because this is a 'use client' component */
+function detectTelegram(): boolean {
+  if (typeof window === 'undefined') return false;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tg = (window as any).Telegram?.WebApp;
+  return !!(tg && (tg.initData || tg.platform));
+}
+
 function SignDepositContent() {
   const searchParams = useSearchParams();
   const chatId = searchParams.get('chatId');
@@ -81,32 +89,32 @@ function SignDepositContent() {
   const [signStatus, setSignStatus] = useState<SignStatus>('idle');
   const [errorMsg, setErrorMsg] = useState('');
   const [txHash, setTxHash] = useState('');
+  // Detect synchronously so first render is correct
+  const [isTelegram] = useState(detectTelegram);
   const [tmaRedirected, setTmaRedirected] = useState(false);
 
   const isValidParams = Boolean(chatId && sig && depositAddress && amount);
 
-  // ── TMA detection & redirect ──
-  // If opened inside Telegram's WebView, immediately redirect to the
-  // system browser where the wallet connector actually works.
+  // ── TMA: redirect to system browser immediately ──
+  // Wallet connector (popups/tabs) cannot work inside Telegram's WebView.
+  // Open the same URL in the real browser where the wallet works, then close TMA.
   useEffect(() => {
+    if (!isTelegram) return;
     const tg = window.Telegram?.WebApp;
-    if (tg && tg.initData) {
-      tg.ready();
-      tg.expand();
+    if (!tg) return;
 
-      // Build the full URL with all params preserved
-      const currentUrl = window.location.href;
+    tg.ready();
+    tg.expand();
 
-      // Open in system browser
-      tg.openLink(currentUrl);
-      setTmaRedirected(true);
+    // Open the current URL in the system browser
+    tg.openLink(window.location.href);
+    setTmaRedirected(true);
 
-      // Close the Mini App after a brief delay so the user sees the redirect
-      setTimeout(() => {
-        try { tg.close(); } catch { /* ignore */ }
-      }, 1500);
-    }
-  }, []);
+    // Close the Mini App after a short delay
+    setTimeout(() => {
+      try { tg.close(); } catch { /* ignore */ }
+    }, 1500);
+  }, [isTelegram]);
 
   // Sign and send the deposit transaction
   const handleSign = useCallback(async () => {

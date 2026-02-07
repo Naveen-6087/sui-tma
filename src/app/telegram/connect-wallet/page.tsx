@@ -55,6 +55,14 @@ declare global {
 
 type LinkStatus = 'idle' | 'linking' | 'success' | 'error';
 
+/** Synchronous check — safe because this is a 'use client' component */
+function detectTelegram(): boolean {
+  if (typeof window === 'undefined') return false;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tg = (window as any).Telegram?.WebApp;
+  return !!(tg && (tg.initData || tg.platform));
+}
+
 function ConnectWalletContent() {
   const searchParams = useSearchParams();
   const chatId = searchParams.get('chatId');
@@ -64,7 +72,8 @@ function ConnectWalletContent() {
     useNearWallet();
   const [linkStatus, setLinkStatus] = useState<LinkStatus>('idle');
   const [errorMsg, setErrorMsg] = useState('');
-  const [isTelegram, setIsTelegram] = useState(false);
+  // Detect TMA synchronously so the first render shows the correct UI
+  const [isTelegram] = useState(detectTelegram);
 
   // Manual input state (used in TMA mode)
   const [manualAccountId, setManualAccountId] = useState('');
@@ -75,15 +84,15 @@ function ConnectWalletContent() {
   // The effective account ID: from wallet connector (browser) or manual input (TMA)
   const effectiveAccountId = isTelegram ? manualAccountId.trim() : walletAccountId;
 
-  // Initialize Telegram WebApp
+  // Initialize Telegram WebApp (expand, ready)
   useEffect(() => {
+    if (!isTelegram) return;
     const tg = window.Telegram?.WebApp;
     if (tg) {
       tg.ready();
       tg.expand();
-      setIsTelegram(true);
     }
-  }, []);
+  }, [isTelegram]);
 
   // Validate a NEAR account ID
   const isValidNearAccount = (id: string): boolean => {
