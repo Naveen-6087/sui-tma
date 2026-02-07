@@ -648,6 +648,33 @@ export default function BalanceManagerPage() {
         throw new Error(`No ${selectedCoin} coins found`);
       }
 
+      // Get SUI coins for gas payment (always needed for transactions)
+      const suiCoins = await suiClient?.getCoins({
+        owner: address,
+        coinType: COIN_TYPES.SUI,
+      });
+
+      if (!suiCoins?.data.length) {
+        throw new Error("No SUI coins found for gas payment");
+      }
+
+      // Filter SUI coins that have enough balance for gas (0.1 SUI = 100_000_000 MIST)
+      const GAS_BUDGET = BigInt(100_000_000);
+      const eligibleGasCoins = suiCoins.data.filter(
+        (coin) => BigInt(coin.balance) >= GAS_BUDGET,
+      );
+
+      if (!eligibleGasCoins.length) {
+        throw new Error(
+          "No SUI coin has enough balance for gas payment (need at least 0.1 SUI)",
+        );
+      }
+
+      // Sort eligible gas coins by balance ascending (smallest first)
+      const sortedSuiCoins = eligibleGasCoins.sort((a, b) =>
+        BigInt(a.balance) < BigInt(b.balance) ? -1 : 1,
+      );
+
       // Calculate total balance
       const totalBalance = coins.data.reduce(
         (sum, coin) => sum + BigInt(coin.balance),
@@ -657,11 +684,11 @@ export default function BalanceManagerPage() {
       // Check total balance (no gas reserve for any token)
       // For SUI deposits, we need to account for excluding gas coin from available coins
       let availableBalance = totalBalance;
-      if (isSUI && coins?.data.length > 0) {
-        const gasCoin = coins.data[0];
-        // If we have multiple SUI coins, subtract gas coin balance from available
+      if (isSUI && sortedSuiCoins.length > 0) {
+        // If we have multiple SUI coins, subtract smallest gas coin balance from available
         if (coins.data.length > 1) {
-          availableBalance = totalBalance - BigInt(gasCoin.balance);
+          const gasCoinBalance = BigInt(sortedSuiCoins[0].balance);
+          availableBalance = totalBalance - gasCoinBalance;
         }
         // If only one SUI coin, we can't deposit (it's used for gas)
         else if (coins.data.length === 1) {
@@ -685,23 +712,13 @@ export default function BalanceManagerPage() {
       let coinToDeposit;
       let gasCoinId: string | null = null;
 
-      // Get a separate gas coin (works for all tokens including SUI)
-      const suiCoins = await suiClient?.getCoins({
-        owner: address,
-        coinType: COIN_TYPES.SUI,
-      });
-
-      if (!suiCoins?.data.length) {
-        throw new Error("No SUI coins found for gas payment");
-      }
-
-      // Use the first SUI coin for gas
-      gasCoinId = suiCoins.data[0].coinObjectId;
+      // Use the smallest SUI coin for gas to maximize available balance
+      gasCoinId = sortedSuiCoins[0].coinObjectId;
       tx.setGasPayment([
         {
           objectId: gasCoinId,
-          version: suiCoins.data[0].version,
-          digest: suiCoins.data[0].digest,
+          version: sortedSuiCoins[0].version,
+          digest: sortedSuiCoins[0].digest,
         },
       ]);
 
