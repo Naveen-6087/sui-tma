@@ -49,8 +49,10 @@ import {
 import {
   buildCreateBalanceManagerTx,
   buildMintTradeCapTx,
-  buildDepositToManagerTx,
+  buildMintAndAssignTradeCapTx,
   buildWithdrawFromManagerTx,
+  BalanceManagerContract,
+  createBalanceManagerContract,
   COIN_TYPES,
   COIN_DECIMALS,
   POOLS,
@@ -64,9 +66,7 @@ import {
   TrendingUp,
   ArrowDownToLine,
   ArrowUpFromLine,
-  Sparkles,
   Shield,
-  Ticket,
   CheckCircle2,
   AlertCircle,
   Loader2,
@@ -82,6 +82,7 @@ import {
   User,
   LogOut,
   Network,
+  Ticket,
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -116,8 +117,10 @@ const COIN_SYMBOL_MAP: Record<string, string> = {
 
 interface TradeCap {
   objectId: string;
-  poolId: string;
-  poolName: string;
+  balanceManagerId: string;
+  owner: string;
+  isOwnedByUser: boolean;
+  isEligible: boolean;
 }
 
 export default function BalanceManagerPage() {
@@ -135,6 +138,10 @@ export default function BalanceManagerPage() {
   const [selectedManagerIndex, setSelectedManagerIndex] = useState(0);
   const balanceManager = balanceManagers[selectedManagerIndex] || null;
   const [tradeCaps, setTradeCaps] = useState<TradeCap[]>([]);
+  const [selectedPool, setSelectedPool] = useState<string>(
+    Object.keys(POOLS)[0],
+  );
+  const [traderAddress, setTraderAddress] = useState("");
   const [loading, setLoading] = useState(false);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -143,20 +150,11 @@ export default function BalanceManagerPage() {
   const [howItWorksOpen, setHowItWorksOpen] = useState(false);
   const [walletBalance, setWalletBalance] = useState<string>("0");
   const [copied, setCopied] = useState(false);
-  const {
-    isAuthenticated: zkLoginAuth,
-    session: zkLoginSession,
-    logout: zkLoginLogout,
-  } = useAuth();
-  const router = useRouter();
 
   // Form states
   const [depositAmount, setDepositAmount] = useState("");
   const [withdrawAmount, setWithdrawAmount] = useState("");
   const [selectedCoin, setSelectedCoin] = useState<string>("SUI");
-  const [selectedPool, setSelectedPool] = useState<string>(
-    Object.keys(POOLS)[0],
-  );
 
   // User balances
   const [userBalances, setUserBalances] = useState<Record<string, string>>({});
@@ -167,6 +165,9 @@ export default function BalanceManagerPage() {
   const deepBookConfig =
     CURRENT_ENV === "mainnet" ? DEEPBOOK_MAINNET : DEEPBOOK_TESTNET;
 
+  // Initialize Balance Manager Contract
+  const balanceManagerContract = createBalanceManagerContract(deepBookConfig);
+
   // Fetch user's Balance Manager and Trade Caps
   const fetchUserData = useCallback(async () => {
     if (!address || !suiClient) return;
@@ -175,13 +176,6 @@ export default function BalanceManagerPage() {
     setError(null);
 
     try {
-      console.log("Fetching Balance Manager for address:", address);
-      console.log("Using package ID:", deepBookConfig.PACKAGE_ID);
-      console.log(
-        "Looking for type:",
-        `${deepBookConfig.PACKAGE_ID}::balance_manager::BalanceManager`,
-      );
-
       // Fetch owned objects to find Balance Manager
       const objects = await suiClient.getOwnedObjects({
         owner: address,
@@ -194,16 +188,9 @@ export default function BalanceManagerPage() {
         },
       });
 
-      console.log("Balance Manager query result:", objects);
-      console.log("Found objects count:", objects.data.length);
-
       if (objects.data.length > 0) {
-        console.log("Found", objects.data.length, "Balance Manager(s)");
-
         const managers: BalanceManagerInfo[] = [];
         for (const managerObj of objects.data) {
-          console.log("Balance Manager object:", managerObj);
-
           if (managerObj.data?.content?.dataType === "moveObject") {
             // Parse balance manager data
             const fields = managerObj.data.content.fields as any;
@@ -220,7 +207,6 @@ export default function BalanceManagerPage() {
           }
         }
 
-        console.log("Setting", managers.length, "Balance Managers");
         const previousCount = balanceManagers.length;
         setBalanceManagers(managers);
 
@@ -233,8 +219,6 @@ export default function BalanceManagerPage() {
           setSelectedManagerIndex(0);
         }
       } else {
-        console.log("No Balance Manager found, checking all objects...");
-
         // Fallback: Check all objects to see if Balance Manager exists with different naming
         const allObjects = await suiClient.getOwnedObjects({
           owner: address,
@@ -244,23 +228,10 @@ export default function BalanceManagerPage() {
           },
         });
 
-        console.log("Total objects owned:", allObjects.data.length);
-
-        // Log ALL object types to see what we have
-        console.log(
-          "All object types:",
-          allObjects.data.map((obj: any) => ({
-            objectId: obj.data?.objectId,
-            type: obj.data?.type,
-          })),
-        );
-
         // Look for any object from the DeepBook package
         const deepbookObjects = allObjects.data.filter((obj: any) =>
           obj.data?.type?.includes(deepBookConfig.PACKAGE_ID),
         );
-
-        console.log("DeepBook objects found:", deepbookObjects);
 
         // Check if any of them is a BalanceManager
         const managerInAll = deepbookObjects.find(
@@ -270,7 +241,6 @@ export default function BalanceManagerPage() {
         );
 
         if (managerInAll) {
-          console.log("Found Balance Manager in all objects:", managerInAll);
           const balances = await fetchBalanceManagerBalances(
             managerInAll.data!.objectId,
           );
@@ -283,13 +253,12 @@ export default function BalanceManagerPage() {
           ]);
           setSelectedManagerIndex(0);
         } else {
-          console.log("No Balance Manager found in any objects");
           setBalanceManagers([]);
         }
       }
 
-      // Fetch Trade Caps
-      const capObjects = await suiClient.getOwnedObjects({
+      // Fetch Trade Caps owned by the user
+      const ownedCapObjects = await suiClient.getOwnedObjects({
         owner: address,
         filter: {
           StructType: `${deepBookConfig.PACKAGE_ID}::balance_manager::TradeCap`,
@@ -297,20 +266,40 @@ export default function BalanceManagerPage() {
         options: {
           showContent: true,
           showType: true,
+          showOwner: true,
         },
       });
 
       const caps: TradeCap[] = [];
-      for (const cap of capObjects.data) {
+      for (const cap of ownedCapObjects.data) {
         if (cap.data?.content?.dataType === "moveObject") {
           const fields = cap.data.content.fields as any;
+          console.log("Full TradeCap object:", cap); // Debug log - entire object
+          console.log("TradeCap fields:", fields); // Debug log - fields only
+
+          // Extract owner address from the owner field
+          let ownerAddress = address; // Default to current user
+          if (
+            cap.data.owner &&
+            typeof cap.data.owner === "object" &&
+            "AddressOwner" in cap.data.owner
+          ) {
+            ownerAddress = cap.data.owner.AddressOwner;
+          }
+
+          const isOwnedByUser = ownerAddress === address;
+
           caps.push({
             objectId: cap.data.objectId,
-            poolId: fields.pool_id || "Unknown",
-            poolName: getPoolNameFromId(fields.pool_id),
+            balanceManagerId:
+              fields.balance_manager_id || fields.id || "Unknown",
+            owner: ownerAddress,
+            isEligible: true, // Assume eligible if not revoked
+            isOwnedByUser: isOwnedByUser,
           });
         }
       }
+
       setTradeCaps(caps);
 
       // Fetch user balances
@@ -330,25 +319,19 @@ export default function BalanceManagerPage() {
     const balances: Record<string, string> = {};
 
     try {
-      console.log("Fetching balances for address:", address);
-      console.log("Current environment:", CURRENT_ENV);
-
       // SUI balance
       const suiBalance = await suiClient.getBalance({
         owner: address,
         coinType: COIN_TYPES.SUI,
       });
-      console.log("SUI balance response:", suiBalance);
       balances["SUI"] = (Number(suiBalance.totalBalance) / 1e9).toFixed(4);
 
       // DEEP balance
       try {
-        console.log("Fetching DEEP with coin type:", COIN_TYPES.DEEP);
         const deepBalance = await suiClient.getBalance({
           owner: address,
           coinType: COIN_TYPES.DEEP,
         });
-        console.log("DEEP balance response:", deepBalance);
         balances["DEEP"] = (Number(deepBalance.totalBalance) / 1e6).toFixed(4);
       } catch (err) {
         console.error("Error fetching DEEP balance:", err);
@@ -359,19 +342,16 @@ export default function BalanceManagerPage() {
       try {
         const usdcType =
           CURRENT_ENV === "mainnet" ? COIN_TYPES.USDC : COIN_TYPES.DBUSDC;
-        console.log("Fetching USDC with coin type:", usdcType);
         const usdcBalance = await suiClient.getBalance({
           owner: address,
           coinType: usdcType,
         });
-        console.log("USDC balance response:", usdcBalance);
         balances["USDC"] = (Number(usdcBalance.totalBalance) / 1e6).toFixed(4);
       } catch (err) {
         console.error("Error fetching USDC balance:", err);
         balances["USDC"] = "0";
       }
 
-      console.log("Final balances:", balances);
       setUserBalances(balances);
     } catch (err) {
       console.error("Error fetching balances:", err);
@@ -380,10 +360,25 @@ export default function BalanceManagerPage() {
 
   // Get pool name from ID
   const getPoolNameFromId = (poolId: string): string => {
+    console.log("🔍 getPoolNameFromId called with:", poolId);
+    console.log("📋 Available POOLS:", Object.keys(POOLS));
+
+    // Normalize the pool ID for comparison
+    const normalizedPoolId = poolId?.toLowerCase()?.trim();
+    console.log("🔄 Normalized poolId:", normalizedPoolId);
+
     for (const [name, info] of Object.entries(POOLS)) {
-      if ((info as any).poolId === poolId) return name;
+      const poolInfoId = (info as any).poolId?.toLowerCase()?.trim();
+      console.log(`🔎 Checking ${name}:`, poolInfoId);
+      if (poolInfoId === normalizedPoolId) {
+        console.log("✅ Found match:", name);
+        return name;
+      }
     }
-    return "Unknown Pool";
+
+    console.log("❌ No match found, returning shortened ID");
+    // If no match found, return a shortened version of the pool ID
+    return `Pool ${poolId.slice(0, 8)}...${poolId.slice(-6)}`;
   };
 
   // Fetch Balance Manager internal balances
@@ -410,24 +405,18 @@ export default function BalanceManagerPage() {
       }
 
       const fields = bmObject.data.content.fields as any;
-      console.log("Balance Manager fields:", fields);
 
       // The balances are stored in a Table (dynamic field)
       // We need to query the dynamic fields of the balance manager
       const balancesTableId = fields.balances?.fields?.id?.id;
       if (!balancesTableId) {
-        console.log("No balances table found");
         return [];
       }
-
-      console.log("Balances table ID:", balancesTableId);
 
       // Get dynamic fields of the balances table
       const dynamicFields = await suiClient.getDynamicFields({
         parentId: balancesTableId,
       });
-
-      console.log("Dynamic fields:", dynamicFields);
 
       const balances: { coin: string; amount: string; symbol: string }[] = [];
 
@@ -438,8 +427,6 @@ export default function BalanceManagerPage() {
             parentId: balancesTableId,
             name: (field as any).name,
           });
-
-          console.log("Field object:", fieldObject);
 
           if (
             fieldObject.data?.content &&
@@ -482,7 +469,6 @@ export default function BalanceManagerPage() {
         }
       }
 
-      console.log("Fetched balances:", balances);
       return balances;
     } catch (err) {
       console.error("Error fetching balance manager balances:", err);
@@ -512,7 +498,6 @@ export default function BalanceManagerPage() {
         },
         {
           onSuccess: async (result) => {
-            console.log("Transaction result:", result);
             const accountNumber = balanceManagers.length + 1;
             setSuccess(
               `Balance Manager #${accountNumber} created successfully! Refreshing...`,
@@ -539,18 +524,37 @@ export default function BalanceManagerPage() {
   };
 
   // Mint Trade Cap
-  const handleMintTradeCap = async () => {
-    if (!address || !balanceManager) return;
-
-    setActionLoading("mintCap");
-    setError(null);
-    setSuccess(null);
+  // Mint Trade Cap (optionally assign to trader)
+  const handleMintTradeCap = async (assignToTrader: boolean = false) => {
+    if (!address || !balanceManager || !account) return;
 
     try {
+      setActionLoading(assignToTrader ? "assignCap" : "mintCap");
+      setError(null);
+      setSuccess(null);
+
       const poolInfo = POOLS[selectedPool as keyof typeof POOLS];
       if (!poolInfo) throw new Error("Invalid pool selected");
 
-      const tx = buildMintTradeCapTx(balanceManager.objectId, address);
+      let tx: Transaction;
+
+      if (assignToTrader) {
+        // Validate trader address
+        if (!traderAddress.trim()) {
+          throw new Error("Trader address is required");
+        }
+        if (!traderAddress.startsWith("0x")) {
+          throw new Error("Invalid trader address format");
+        }
+
+        tx = buildMintAndAssignTradeCapTx(
+          balanceManager.objectId,
+          traderAddress.trim(),
+        );
+      } else {
+        tx = buildMintTradeCapTx(balanceManager.objectId, address);
+      }
+
       tx.setSender(account.address);
       tx.setGasBudget(100_000_000); // 0.1 SUI gas budget
 
@@ -560,20 +564,32 @@ export default function BalanceManagerPage() {
         },
         {
           onSuccess: async () => {
-            setSuccess(`Trade Cap minted for ${selectedPool}!`);
+            const action = assignToTrader ? "assigned" : "minted";
+            const target = assignToTrader
+              ? `to ${traderAddress.slice(0, 6)}...${traderAddress.slice(-4)}`
+              : "for you";
+            setSuccess(`Trade Cap ${action} ${target} for ${selectedPool}!`);
+            setTraderAddress(""); // Clear trader address
             await fetchUserData();
             setActionLoading(null);
           },
           onError: (err) => {
-            console.error("Error minting Trade Cap:", err);
-            setError(err.message || "Failed to mint Trade Cap");
+            console.error("Error with Trade Cap:", err);
+            setError(
+              err.message ||
+                `Failed to ${assignToTrader ? "assign" : "mint"} Trade Cap`,
+            );
             setActionLoading(null);
           },
         },
       );
     } catch (err) {
-      console.error("Error minting Trade Cap:", err);
-      setError(err instanceof Error ? err.message : "Failed to mint Trade Cap");
+      console.error("Error with Trade Cap:", err);
+      setError(
+        err instanceof Error
+          ? err.message
+          : `Failed to ${assignToTrader ? "assign" : "mint"} Trade Cap`,
+      );
       setActionLoading(null);
     }
   };
@@ -611,27 +627,60 @@ export default function BalanceManagerPage() {
         throw new Error(`No ${selectedCoin} coins found`);
       }
 
+      // Get SUI coins for gas payment (always needed for transactions)
+      const suiCoins = await suiClient?.getCoins({
+        owner: address,
+        coinType: COIN_TYPES.SUI,
+      });
+
+      if (!suiCoins?.data.length) {
+        throw new Error("No SUI coins found for gas payment");
+      }
+
+      // Filter SUI coins that have enough balance for gas (0.1 SUI = 100_000_000 MIST)
+      const GAS_BUDGET = BigInt(100_000_000);
+      const eligibleGasCoins = suiCoins.data.filter(
+        (coin) => BigInt(coin.balance) >= GAS_BUDGET,
+      );
+
+      if (!eligibleGasCoins.length) {
+        throw new Error(
+          "No SUI coin has enough balance for gas payment (need at least 0.1 SUI)",
+        );
+      }
+
+      // Sort eligible gas coins by balance ascending (smallest first)
+      const sortedSuiCoins = eligibleGasCoins.sort((a, b) =>
+        BigInt(a.balance) < BigInt(b.balance) ? -1 : 1,
+      );
+
       // Calculate total balance
       const totalBalance = coins.data.reduce(
         (sum, coin) => sum + BigInt(coin.balance),
         BigInt(0),
       );
 
-      // For SUI, check if we have enough after reserving gas
-      if (isSUI) {
-        const availableForDeposit = totalBalance - GAS_RESERVE;
-        if (availableForDeposit < amount) {
+      // Check total balance (no gas reserve for any token)
+      // For SUI deposits, we need to account for excluding gas coin from available coins
+      let availableBalance = totalBalance;
+      if (isSUI && sortedSuiCoins.length > 0) {
+        // If we have multiple SUI coins, subtract smallest gas coin balance from available
+        if (coins.data.length > 1) {
+          const gasCoinBalance = BigInt(sortedSuiCoins[0].balance);
+          availableBalance = totalBalance - gasCoinBalance;
+        }
+        // If only one SUI coin, we can't deposit (it's used for gas)
+        else if (coins.data.length === 1) {
           throw new Error(
-            `Insufficient SUI. Need ${(Number(amount) / 1e9).toFixed(4)} SUI + gas reserve (0.2 SUI). Available: ${(Number(totalBalance) / 1e9).toFixed(4)} SUI`,
+            "You need at least 2 SUI coins to deposit SUI (one for gas, one for deposit)",
           );
         }
-      } else {
-        // For non-SUI tokens, just check total balance
-        if (totalBalance < amount) {
-          throw new Error(
-            `Insufficient balance. Need: ${parseFloat(depositAmount).toFixed(4)} ${selectedCoin}`,
-          );
-        }
+      }
+
+      if (availableBalance < amount) {
+        throw new Error(
+          `Insufficient balance. Need: ${parseFloat(depositAmount).toFixed(4)} ${selectedCoin}, Available: ${(Number(availableBalance) / Math.pow(10, decimals)).toFixed(4)} ${selectedCoin}`,
+        );
       }
 
       // Build transaction
@@ -640,72 +689,65 @@ export default function BalanceManagerPage() {
       tx.setGasBudget(100_000_000); // 0.1 SUI gas budget
 
       let coinToDeposit;
+      let gasCoinId: string | null = null;
 
-      if (isSUI) {
-        // For SUI: Carefully select coins to avoid consuming gas coins
-        // Sort coins by balance (smallest first to preserve larger ones for gas)
-        const sortedCoins = [...coins.data].sort(
-          (a, b) => Number(a.balance) - Number(b.balance),
-        );
+      // Use the smallest SUI coin for gas to maximize available balance
+      gasCoinId = sortedSuiCoins[0].coinObjectId;
+      tx.setGasPayment([
+        {
+          objectId: gasCoinId,
+          version: sortedSuiCoins[0].version,
+          digest: sortedSuiCoins[0].digest,
+        },
+      ]);
 
-        let accumulated = BigInt(0);
-        const coinsToUse: string[] = [];
-
-        // Select minimum coins needed for the deposit amount
-        for (const coin of sortedCoins) {
-          if (accumulated >= amount) break;
-          coinsToUse.push(coin.coinObjectId);
-          accumulated += BigInt(coin.balance);
-        }
-
-        if (coinsToUse.length === 0) {
-          throw new Error("Unable to select coins for deposit");
-        }
-
-        // Merge selected coins if more than one
-        if (coinsToUse.length > 1) {
-          tx.mergeCoins(
-            tx.object(coinsToUse[0]),
-            coinsToUse.slice(1).map((id) => tx.object(id)),
-          );
-        }
-
-        // Split the exact amount needed
-        const [split] = tx.splitCoins(tx.object(coinsToUse[0]), [
+      // Handle coin selection and merging (same logic for all tokens)
+      if (coins.data.length === 1) {
+        const [split] = tx.splitCoins(tx.object(coins.data[0].coinObjectId), [
           tx.pure.u64(amount),
         ]);
         coinToDeposit = split;
       } else {
-        // For non-SUI tokens: Safe to merge all coins
-        if (coins.data.length === 1) {
-          const [split] = tx.splitCoins(tx.object(coins.data[0].coinObjectId), [
+        // For SUI deposits, exclude the gas coin from merging to avoid mutable object conflicts
+        let coinsToUse = coins.data;
+        if (isSUI && gasCoinId) {
+          coinsToUse = coins.data.filter(
+            (coin) => coin.coinObjectId !== gasCoinId,
+          );
+          // If filtering removed all coins, fall back to original logic (shouldn't happen)
+          if (coinsToUse.length === 0) {
+            coinsToUse = coins.data;
+          }
+        }
+
+        if (coinsToUse.length === 1) {
+          const [split] = tx.splitCoins(tx.object(coinsToUse[0].coinObjectId), [
             tx.pure.u64(amount),
           ]);
           coinToDeposit = split;
         } else {
-          // Merge all coins then split
+          // Merge all available coins then split
           tx.mergeCoins(
-            tx.object(coins.data[0].coinObjectId),
-            coins.data.slice(1).map((c) => tx.object(c.coinObjectId)),
+            tx.object(coinsToUse[0].coinObjectId),
+            coinsToUse.slice(1).map((c) => tx.object(c.coinObjectId)),
           );
-          const [split] = tx.splitCoins(tx.object(coins.data[0].coinObjectId), [
+          const [split] = tx.splitCoins(tx.object(coinsToUse[0].coinObjectId), [
             tx.pure.u64(amount),
           ]);
           coinToDeposit = split;
         }
       }
 
-      // Use the deposit function
-      const finalTx = buildDepositToManagerTx(
-        balanceManager.objectId,
-        coinType,
-        coinToDeposit,
-        tx,
-      );
+      // Call deposit function directly to avoid multiple mutable references
+      tx.moveCall({
+        target: `${deepBookConfig.PACKAGE_ID}::balance_manager::deposit`,
+        arguments: [tx.object(balanceManager.objectId), coinToDeposit],
+        typeArguments: [coinType],
+      });
 
       signAndExecute(
         {
-          transaction: finalTx as any, // Cast to any to avoid version conflict
+          transaction: tx as any, // Cast to any to avoid version conflict
         },
         {
           onSuccess: async () => {
@@ -1457,32 +1499,90 @@ export default function BalanceManagerPage() {
                       Trade Caps
                     </CardTitle>
                     <CardDescription className="text-sm">
-                      Authorize your Balance Manager to trade on specific pools
+                      Manage trading permissions for your Balance Manager. Mint
+                      TradeCaps and assign them to traders, or revoke access
+                      when needed.
                     </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
+                    {/* Explanation of TradeCap workflow */}
+                    <div className="p-3 bg-muted border border-border rounded-lg">
+                      <p className="text-sm text-muted-foreground">
+                        <Info className="w-4 h-4 inline mr-1" />
+                        <strong>How TradeCaps work:</strong> Mint a cap for a
+                        pool, then assign it to a trader by transferring the
+                        object. TradeCaps grant trading permissions on DeepBook
+                        V3.
+                      </p>
+                    </div>
+
+                    {/* Note about current limitations */}
+                    <div className="p-3 bg-muted border border-border rounded-lg">
+                      <p className="text-sm text-muted-foreground">
+                        <Info className="w-4 h-4 inline mr-1" />
+                        Currently showing TradeCaps owned by you. TradeCaps
+                        assigned to other traders won't appear here. Track
+                        assignments in your app for full visibility.
+                      </p>
+                    </div>
+
                     {/* Existing Trade Caps */}
                     {tradeCaps.length > 0 && (
                       <div className="space-y-3">
                         <h3 className="text-sm font-medium text-foreground">
-                          Active Trade Caps
+                          Your Trade Caps
                         </h3>
                         <div className="grid gap-3">
                           {tradeCaps.map((cap) => (
                             <div
                               key={cap.objectId}
-                              className="p-4 bg-secondary/50 rounded-lg border border-border hover:border-primary transition-colors flex justify-between items-center"
+                              className="p-4 bg-card rounded-lg border border-border hover:border-primary hover:bg-accent/50 transition-all duration-200 shadow-sm"
                             >
-                              <div>
-                                <p className="text-foreground font-semibold">
-                                  {cap.poolName}
-                                </p>
-                                <p className="text-muted-foreground text-xs font-mono mt-1">
-                                  {cap.objectId.slice(0, 12)}...
-                                  {cap.objectId.slice(-8)}
-                                </p>
+                              <div className="flex justify-between items-start">
+                                <div className="flex-1">
+                                  <div className="flex items-center gap-2 mb-2">
+                                    <p className="text-foreground font-semibold">
+                                      TradeCap
+                                    </p>
+                                    <Badge
+                                      variant={
+                                        cap.isEligible ? "default" : "secondary"
+                                      }
+                                      className={
+                                        cap.isEligible
+                                          ? "bg-emerald-600 text-white hover:bg-emerald-700"
+                                          : ""
+                                      }
+                                    >
+                                      {cap.isEligible
+                                        ? "Eligible"
+                                        : "Ineligible"}
+                                    </Badge>
+                                    {cap.isOwnedByUser && (
+                                      <Badge
+                                        variant="outline"
+                                        className="text-xs"
+                                      >
+                                        Owned by You
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <p className="text-muted-foreground text-xs font-mono">
+                                    ID: {cap.objectId.slice(0, 12)}...
+                                    {cap.objectId.slice(-8)}
+                                  </p>
+                                  <p className="text-muted-foreground text-xs mt-1">
+                                    Owner: {cap.owner.slice(0, 6)}...
+                                    {cap.owner.slice(-4)}
+                                    {cap.isOwnedByUser && " (You)"}
+                                  </p>
+                                  <p className="text-muted-foreground text-xs mt-1">
+                                    Balance Manager:{" "}
+                                    {cap.balanceManagerId.slice(0, 8)}...
+                                    {cap.balanceManagerId.slice(-6)}
+                                  </p>
+                                </div>
                               </div>
-                              <Badge variant="secondary">Active</Badge>
                             </div>
                           ))}
                         </div>
@@ -1495,34 +1595,67 @@ export default function BalanceManagerPage() {
                         <Plus className="w-5 h-5 text-primary" />
                         Mint New Trade Cap
                       </h3>
-                      <div className="flex flex-col sm:flex-row gap-3">
-                        <Select
-                          value={selectedPool}
-                          onValueChange={setSelectedPool}
-                        >
-                          <SelectTrigger className="flex-1">
-                            <SelectValue placeholder="Select a pool" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {Object.keys(POOLS).map((pool) => (
-                              <SelectItem key={pool} value={pool}>
-                                {pool}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <Button
-                          onClick={handleMintTradeCap}
-                          disabled={actionLoading === "mintCap"}
-                          variant="secondary"
-                          className="w-full sm:w-auto"
-                        >
-                          {actionLoading === "mintCap" ? (
-                            <Loader2 className="w-5 h-5 animate-spin" />
-                          ) : (
-                            "Mint Cap"
-                          )}
-                        </Button>
+                      <div className="space-y-3">
+                        <div className="flex flex-col sm:flex-row gap-3">
+                          <Select
+                            value={selectedPool}
+                            onValueChange={setSelectedPool}
+                          >
+                            <SelectTrigger className="flex-1">
+                              <SelectValue placeholder="Select a pool" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {Object.keys(POOLS).map((pool) => (
+                                <SelectItem key={pool} value={pool}>
+                                  {pool}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <Button
+                            onClick={() => handleMintTradeCap(false)}
+                            disabled={actionLoading === "mintCap"}
+                            variant="secondary"
+                            className="w-full sm:w-auto"
+                          >
+                            {actionLoading === "mintCap" ? (
+                              <Loader2 className="w-5 h-5 animate-spin" />
+                            ) : (
+                              "Mint for Me"
+                            )}
+                          </Button>
+                        </div>
+
+                        {/* Assign to Trader Section */}
+                        <div className="pt-3 border-t border-border">
+                          <h4 className="text-sm font-medium text-foreground mb-2">
+                            Or assign directly to a trader:
+                          </h4>
+                          <div className="flex flex-col sm:flex-row gap-3">
+                            <Input
+                              type="text"
+                              value={traderAddress}
+                              onChange={(e) => setTraderAddress(e.target.value)}
+                              placeholder="Trader address (0x...)"
+                              className="flex-1"
+                            />
+                            <Button
+                              onClick={() => handleMintTradeCap(true)}
+                              disabled={
+                                actionLoading === "assignCap" ||
+                                !traderAddress.trim()
+                              }
+                              variant="default"
+                              className="w-full sm:w-auto"
+                            >
+                              {actionLoading === "assignCap" ? (
+                                <Loader2 className="w-5 h-5 animate-spin" />
+                              ) : (
+                                "Mint & Assign"
+                              )}
+                            </Button>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   </CardContent>
