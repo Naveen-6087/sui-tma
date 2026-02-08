@@ -203,7 +203,7 @@ export default function Home() {
             Four specialized modules working together to give you the deepest
             trading experience on Sui
           </p>
-          
+
           {/* Telegram Bot CTA */}
           <div className="max-w-xl mx-auto my-20">
             <a
@@ -467,7 +467,9 @@ export default function Home() {
                       Trade on Telegram
                     </h3>
                     <p className="text-base text-muted-foreground mb-4">
-                      Meet Echo - your intelligent trading assistant. Execute trades, check prices, and manage positions directly from Telegram.
+                      Meet Echo - your intelligent trading assistant. Execute
+                      trades, check prices, and manage positions directly from
+                      Telegram.
                     </p>
                     <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-primary/30 text-primary font-semibold group-hover:border-primary/50 transition-colors">
                       <span className="text-lg">@DeepIntentBot</span>
