@@ -91,10 +91,10 @@ async function sendPhoto(
   photoUrl: string,
   caption: string,
   options: Record<string, unknown> = {},
-) {
-  if (!TELEGRAM_TOKEN) return;
+): Promise<boolean> {
+  if (!TELEGRAM_TOKEN) return false;
   try {
-    await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendPhoto`, {
+    const res = await fetch(`https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendPhoto`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -105,8 +105,15 @@ async function sendPhoto(
         ...options,
       }),
     });
+    const data = await res.json();
+    if (!data.ok) {
+      console.error('[Telegram] sendPhoto rejected:', data.description);
+      return false;
+    }
+    return true;
   } catch (err) {
     console.error('[Telegram] Failed to send photo:', err);
+    return false;
   }
 }
 
@@ -328,23 +335,35 @@ async function handleFundCommand(chatId: number) {
   // Build Mini App URL for rich funding page
   const fundAppUrl = `${APP_URL}/telegram/fund?address=${encodeURIComponent(nearAddr)}&chatId=${chatId}`;
 
-  // Send QR code as a photo with caption
-  await sendPhoto(
+  // Build inline keyboard — use url button (opens in browser) instead of web_app
+  // since web_app requires BotFather domain config that may not be set
+  const replyMarkup = {
+    inline_keyboard: [
+      [{ text: '📱 Open Funding Page', url: fundAppUrl }],
+      [{ text: '📋 Copy Address', callback_data: `copy:${nearAddr}` }],
+      [{ text: '💰 Check Balance', callback_data: 'agent:Balance' }],
+    ],
+  };
+
+  // Try sending QR code as photo first
+  const photoSent = await sendPhoto(
     chatId,
     qrUrl,
-    `💳 *Fund Your Wallet*\n\n` +
-      `Send NEAR to this address:\n\`${nearAddr}\`\n\n` +
-      `Scan the QR code above or tap the button below for the full funding page with copy button & wallet links.`,
-    {
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: '📱 Open Funding Page', web_app: { url: fundAppUrl } }],
-          [{ text: '📋 Copy Address', callback_data: `copy:${nearAddr}` }],
-          [{ text: '💰 Check Balance', callback_data: 'agent:Balance' }],
-        ],
-      },
-    },
+    `💳 Fund Your Wallet\n\nSend NEAR to this address:\n${nearAddr}\n\nScan the QR code or tap the button below for the full funding page.`,
+    { reply_markup: replyMarkup },
   );
+
+  // Fallback: if photo fails, send as a regular text message with link to QR
+  if (!photoSent) {
+    await sendMessage(
+      chatId,
+      `💳 *Fund Your Wallet*\n\n` +
+        `Send NEAR to this address:\n\`${nearAddr}\`\n\n` +
+        `[📷 View QR Code](${qrUrl})\n\n` +
+        `Tap the button below for the full funding page with copy button & wallet links.`,
+      { reply_markup: replyMarkup },
+    );
+  }
 }
 
 async function handleSwapCommand(chatId: number, args: string) {

@@ -329,21 +329,36 @@ export function createTradingBot(token: string): Bot<BotContext> {
     // Mini App funding page URL
     const fundAppUrl = `${APP_URL}/telegram/fund?address=${encodeURIComponent(nearAddr)}&chatId=${chatId}`;
 
-    // Send QR code as photo with caption + Mini App button
-    await ctx.replyWithPhoto(qrUrl, {
-      caption:
+    // Use url button instead of web_app (web_app requires BotFather domain config)
+    const replyMarkup = {
+      inline_keyboard: [
+        [{ text: '📱 Open Funding Page', url: fundAppUrl }],
+        [{ text: '📋 Copy Address', callback_data: `copy:${nearAddr}` }],
+        [{ text: '💰 Check Balance', callback_data: 'agent:Balance' }],
+      ],
+    };
+
+    // Try sending QR code as photo
+    try {
+      await ctx.replyWithPhoto(qrUrl, {
+        caption:
+          `💳 Fund Your Wallet\n\n` +
+          `Send NEAR to this address:\n${nearAddr}\n\n` +
+          `Scan the QR code or tap the button below for the full funding page.`,
+        parse_mode: "Markdown",
+        reply_markup: replyMarkup,
+      });
+    } catch (err) {
+      console.error('[Fund] Photo send failed, using text fallback:', err);
+      // Fallback: send as text with link to QR image
+      await ctx.reply(
         `💳 *Fund Your Wallet*\n\n` +
-        `Send NEAR to this address:\n\`${nearAddr}\`\n\n` +
-        `Scan the QR code above or tap the button below for the full funding page with copy button & wallet links.`,
-      parse_mode: "Markdown",
-      reply_markup: {
-        inline_keyboard: [
-          [{ text: '📱 Open Funding Page', web_app: { url: fundAppUrl } }],
-          [{ text: '📋 Copy Address', callback_data: `copy:${nearAddr}` }],
-          [{ text: '💰 Check Balance', callback_data: 'agent:Balance' }],
-        ],
-      },
-    });
+          `Send NEAR to this address:\n\`${nearAddr}\`\n\n` +
+          `[📷 View QR Code](${qrUrl})\n\n` +
+          `Tap the button below for the full funding page.`,
+        { parse_mode: "Markdown", reply_markup: replyMarkup },
+      );
+    }
   });
 
   // ─── /swap <natural language> ──────────────────────
