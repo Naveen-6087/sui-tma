@@ -46,6 +46,17 @@ export const nearAccounts = new Map<string, string>();
  */
 export const nearLegacyCreds = new Map<string, { accountId: string; privateKey: string }>();
 
+// ── Privy wallet store ──────────────────────────────
+// Key: Telegram chatId, Value: Privy wallet info
+export interface PrivyWalletEntry {
+  privyUserId: string;
+  walletId: string;
+  nearAddress: string;
+  telegramUserId: number;
+}
+
+export const privyWallets = new Map<string, PrivyWalletEntry>();
+
 // ── Helpers ─────────────────────────────────────────
 
 /** Build ProcessMessage options for a chat */
@@ -53,19 +64,32 @@ export function getAgentOpts(chatId: string) {
   const wallet = wallets.get(chatId);
   const accountId = nearAccounts.get(chatId);
   const legacy = nearLegacyCreds.get(chatId);
+  const privy = privyWallets.get(chatId);
 
-  // Prefer the wallet-connected accountId; fall back to legacy import
-  const nearAccountId = accountId || legacy?.accountId;
+  // Priority: legacy import > privy wallet > old near-connect > manual
+  const nearAccountId = legacy?.accountId || privy?.nearAddress || accountId;
   const nearPrivateKey = legacy?.privateKey;
+
+  // Determine execution mode
+  let executionMode: 'auto' | 'privy-auto' | 'client-sign' | 'manual';
+  if (nearPrivateKey) {
+    executionMode = 'auto';           // Legacy import with private key
+  } else if (privy) {
+    executionMode = 'privy-auto';     // Privy embedded wallet (server-side signing)
+  } else if (accountId) {
+    executionMode = 'client-sign';    // Old near-connect (kept for website)
+  } else {
+    executionMode = 'manual';         // No wallet connected
+  }
 
   return {
     userAddress: wallet,
     nearAccountId,
     nearPrivateKey,
-    executionMode: (nearPrivateKey ? 'auto' : nearAccountId ? 'client-sign' : 'manual') as
-      | 'auto'
-      | 'client-sign'
-      | 'manual',
+    executionMode,
+    // Privy-specific fields
+    privyWalletId: privy?.walletId,
+    privyNearAddress: privy?.nearAddress,
   };
 }
 
