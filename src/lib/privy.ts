@@ -15,15 +15,14 @@ import { PrivyClient } from '@privy-io/node';
 import {
   JsonRpcProvider,
   baseDecode,
+  baseEncode,
   PublicKey,
   actions,
   createTransaction,
   SignedTransaction,
   Signature,
 } from 'near-api-js';
-import { sha256 } from '@noble/hashes/sha256';
-import { base58 } from '@scure/base';
-import { toHex } from 'viem';
+import { createHash } from 'crypto';
 import { getNearIntentsAPI } from './near-intents-api';
 
 // ============== Config ==============
@@ -223,7 +222,7 @@ export async function signAndBroadcastNearDeposit(
 
     // Get the public key from the implicit address (hex → base58 → ed25519:...)
     const pubKeyBytes = Buffer.from(nearAddress, 'hex');
-    const base58PubKey = base58.encode(pubKeyBytes);
+    const base58PubKey = baseEncode(pubKeyBytes);
     const publicKey = PublicKey.fromString(`ed25519:${base58PubKey}`);
 
     // Get recent block hash
@@ -296,7 +295,8 @@ export async function signAndBroadcastNearDeposit(
 
     // Serialize and hash the transaction
     const serializedTx = tx.encode();
-    const txHashHex = toHex(sha256(serializedTx));
+    const txHashBytes = createHash('sha256').update(Buffer.from(serializedTx)).digest();
+    const txHashHex = `0x${txHashBytes.toString('hex')}` as `0x${string}`;
 
     console.log(`[Privy] Signing NEAR tx with hash: ${txHashHex}`);
 
