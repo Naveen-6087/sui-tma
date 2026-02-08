@@ -38,7 +38,7 @@ import Image from "next/image";
 const navigation = [
   { name: "Marlin", href: "/indexer", subtitle: "Pool Explorer" },
   { name: "Barracuda", href: "/trade", subtitle: "Trading Terminal" },
-  { name: "Manta", href: "/agent", subtitle: "Cross-chain AI" },
+  { name: "Manta", href: "/agent", subtitle: "Multi-chain AI" },
   { name: "Phantom", href: "/intents", subtitle: "Private Intents" },
 ];
 
@@ -279,7 +279,7 @@ export function Navigation() {
               href="/"
               className="flex items-center gap-2.5 group transition-all duration-300 hover:opacity-80"
             >
-              <div className="w-9 h-9 flex items-center justify-center transition-transform duration-300 group-hover:scale-110">
+              <div className="w-9 h-9 flex items-center justify-center transition-transform duration-300 ">
                 <Image
                   src="/logo-tma.png"
                   alt="Abyss Protocol Logo"

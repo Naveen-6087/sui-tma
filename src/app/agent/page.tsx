@@ -18,11 +18,11 @@ import {
   Copy,
   Check,
   ExternalLink,
-  Sparkles,
   Wallet,
   LogOut,
 } from "lucide-react";
 import Link from "next/link";
+import Image from "next/image";
 import type { AgentResponse, MessageType } from "@/lib/near-intents-agent";
 
 // ============== Types ==============
@@ -366,14 +366,17 @@ ${nearAccountId ? `✅ NEAR Wallet: \`${nearAccountId}\`` : "💡 **Tip:** Click
         </Link>
 
         <div className="flex items-center gap-2.5">
-          <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center">
-            <Bot className="w-5 h-5 text-primary" />
+          <div className="w-9 h-9 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden">
+            <Image
+              src="/manta.png"
+              alt="Manta"
+              width={36}
+              height={36}
+              className="w-full h-full object-contain"
+            />
           </div>
           <div>
-            <h1 className="text-sm font-semibold flex items-center gap-1.5">
-              NEAR Intents Agent
-              <Sparkles className="w-3.5 h-3.5 text-primary" />
-            </h1>
+            <h1 className="text-sm font-semibold">Mantle</h1>
             <p className="text-[11px] text-muted-foreground">
               Cross-chain swaps for SUI
             </p>
@@ -445,8 +448,14 @@ ${nearAccountId ? `✅ NEAR Wallet: \`${nearAccountId}\`` : "💡 **Tip:** Click
 
           {isLoading && (
             <div className="flex items-start gap-3">
-              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
-                <Bot className="w-4 h-4 text-primary" />
+              <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 overflow-hidden">
+                <Image
+                  src="/manta.png"
+                  alt="Manta"
+                  width={32}
+                  height={32}
+                  className="w-full h-full object-contain"
+                />
               </div>
               <div className="bg-card rounded-2xl rounded-tl-md px-4 py-3 border">
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -528,8 +537,14 @@ function MessageBubble({
 
   return (
     <div className="flex items-start gap-3">
-      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5">
-        <Bot className="w-4 h-4 text-primary" />
+      <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center shrink-0 mt-0.5 overflow-hidden">
+        <Image
+          src="/manta.png"
+          alt="Manta"
+          width={32}
+          height={32}
+          className="w-full h-full object-contain"
+        />
       </div>
       <div className="flex-1 max-w-[85%] space-y-2">
         {/* Message content */}

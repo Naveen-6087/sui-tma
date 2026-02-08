@@ -47,9 +47,9 @@ const modules = [
   },
   {
     name: "Manta",
-    title: "Cross-Chain Intelligence",
+    title: "Multi-Chain Intelligence",
     description:
-      "Glide effortlessly across 15+ blockchains with AI-powered routing. Execute cross-chain swaps with intelligent pathfinding and optimal fee management.",
+      "Glide effortlessly across 15+ blockchains with AI-powered routing. Execute multi-chain swaps with intelligent pathfinding and optimal fee management.",
     image: "/manta.png",
     href: "/agent",
     gradient: "from-purple-500/20 to-pink-500/20",
@@ -110,7 +110,7 @@ export default function Home() {
 
             <p className="text-base sm:text-lg text-muted-foreground/80 mb-10 max-w-2xl mx-auto leading-relaxed">
               Enterprise-grade trading infrastructure with privacy, speed, and
-              cross-chain intelligence. Built on DeepBook V3.
+              multi-chain intelligence. Built on DeepBook V3.
             </p>
 
             <div className="flex flex-wrap items-center justify-center gap-4 mb-8">
@@ -145,7 +145,7 @@ export default function Home() {
                     height={50}
                     className="mr-2"
                   />
-                  Try Echo Bot
+                  Try Abyss Bot
                 </Button>
               </a>
             </div>
@@ -435,7 +435,7 @@ export default function Home() {
                     size="lg"
                     className="w-full sm:w-auto h-12 px-8"
                   >
-                    Explore Cross-Chain
+                    Explore Multi-Chain
                   </Button>
                 </Link>
               </div>
@@ -467,9 +467,9 @@ export default function Home() {
                       Trade on Telegram
                     </h3>
                     <p className="text-base text-muted-foreground mb-4">
-                      Meet Echo - your intelligent trading assistant. Execute
-                      trades, check prices, and manage positions directly from
-                      Telegram.
+                      Meet Abyss Bot - your intelligent trading assistant.
+                      Execute trades, check prices, and manage positions
+                      directly from Telegram.
                     </p>
                     <div className="inline-flex items-center gap-2 px-4 py-2 rounded-lg border border-primary/30 text-primary font-semibold group-hover:border-primary/50 transition-colors">
                       <span className="text-lg">@DeepIntentBot</span>
