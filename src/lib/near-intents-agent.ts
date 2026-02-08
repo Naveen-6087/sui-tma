@@ -46,18 +46,23 @@ export type MessageType =
 export interface ProcessMessageOptions {
   /** Connected SUI/EVM wallet address (for receiving tokens) */
   userAddress?: string;
-  /** User's NEAR account ID (from wallet input, wallet selector, or import) */
+  /** User's NEAR account ID (from wallet input, wallet selector, import, or Privy) */
   nearAccountId?: string;
   /** User's NEAR private key (from account import — Telegram or website power-user) */
   nearPrivateKey?: string;
   /**
    * Execution mode for NEAR-origin swaps:
    * - 'auto'        → Server executes deposit automatically (env vars or imported keys)
+   * - 'privy-auto'  → Privy embedded wallet signs & broadcasts server-side
    * - 'client-sign' → Return deposit info, client will sign with connected wallet
    * - 'manual'      → Return deposit info & instructions for manual send
    * If not set, inferred from available credentials.
    */
-  executionMode?: 'auto' | 'client-sign' | 'manual';
+  executionMode?: 'auto' | 'privy-auto' | 'client-sign' | 'manual';
+  /** Privy wallet ID (for privy-auto execution mode) */
+  privyWalletId?: string;
+  /** Privy NEAR address / implicit account ID (for privy-auto execution mode) */
+  privyNearAddress?: string;
 }
 
 export interface AgentMessage {
@@ -877,14 +882,19 @@ ${canAutoExecute
     const hasServerAccount = isNearAccountConfigured();
     const hasImportedKeys = !!opts.nearPrivateKey && !!opts.nearAccountId;
     const isClientSign = opts.executionMode === 'client-sign' && !!opts.nearAccountId;
+    const isPrivyAuto = opts.executionMode === 'privy-auto' && !!opts.privyWalletId && !!opts.privyNearAddress;
 
     // Determine execution path:
     // 1. Imported keys (Telegram or website power-user) → auto-execute with custom credentials
-    // 2. Client-side wallet (website with wallet selector) → return deposit_needed
-    // 3. Server NEAR account (env vars) → auto-execute with server credentials
-    // 4. None of the above → manual deposit
+    // 2. Privy embedded wallet (Telegram /connect) → server-side signing via Privy
+    // 3. Client-side wallet (website with wallet selector) → return deposit_needed
+    // 4. Server NEAR account (env vars) → auto-execute with server credentials
+    // 5. None of the above → manual deposit
     if (isNearOrigin && hasImportedKeys) {
       return this.handleAutoExecuteWithCredentials(opts);
+    }
+    if (isNearOrigin && isPrivyAuto) {
+      return this.handlePrivyAutoDeposit(opts);
     }
     if (isNearOrigin && isClientSign) {
       return this.handleClientSideDeposit(opts);
@@ -1051,6 +1061,86 @@ Please wait while the transaction is being processed...`;
       this.pendingQuote = null;
       return {
         message: `❌ **Swap Failed**\n\n${error instanceof Error ? error.message : 'Unknown error'}\n\nCheck that your imported NEAR credentials are correct.`,
+        type: 'error',
+        suggestedActions: ['Try again', 'Help'],
+      };
+    }
+  }
+
+  /**
+   * Auto-execute with Privy embedded wallet (server-side signing).
+   * Used when executionMode === 'privy-auto' (Telegram /connect with Privy).
+   */
+  private async handlePrivyAutoDeposit(opts: ProcessMessageOptions): Promise<AgentResponse> {
+    if (!this.pendingQuote || !opts.privyWalletId || !opts.privyNearAddress) {
+      return { message: 'No pending quote or missing Privy wallet info.', type: 'error' };
+    }
+
+    try {
+      const { executePrivySwapDeposit } = await import('./privy');
+
+      const result = await executePrivySwapDeposit(
+        opts.privyWalletId,
+        opts.privyNearAddress,
+        this.pendingQuote.originAsset,
+        this.pendingQuote.destinationAsset,
+        this.pendingQuote.amount,
+        this.pendingQuote.recipientAddress,
+        opts.privyNearAddress, // refund to Privy wallet
+      );
+
+      this.lastExecutionResult = {
+        success: result.success,
+        txHash: result.txHash,
+        depositAddress: result.depositAddress,
+        error: result.error,
+        explorerUrl: result.explorerUrl,
+        nearBlocksUrl: result.nearBlocksUrl,
+      };
+
+      if (!result.success) {
+        this.pendingQuote = null;
+        return {
+          message: `❌ **Swap Failed**\n\n${result.error || 'Unknown error.'}\n\nPlease try again.`,
+          type: 'error',
+          suggestedActions: ['Try again', 'Help'],
+        };
+      }
+
+      const pendingData = { ...this.pendingQuote };
+      this.pendingQuote = null;
+
+      return {
+        message: `✅ **Swap Executed Successfully!**
+
+| | Details |
+|---|---|
+| **From** | ${pendingData.amountIn} ${pendingData.tokenInSymbol} |
+| **To** | (estimated) ${pendingData.tokenOutSymbol} |
+| **Privy Wallet** | \`${opts.privyNearAddress}\` |
+| **Deposit Address** | \`${result.depositAddress}\` |
+| **TX Hash** | \`${result.txHash}\` |
+
+📊 Track progress: say **"status ${result.depositAddress}"**
+🔗 [NEAR Intents Explorer](${result.explorerUrl})
+🔗 [NearBlocks TX](${result.nearBlocksUrl})`,
+        type: 'execution',
+        data: {
+          depositAddress: result.depositAddress,
+          txHash: result.txHash,
+          explorerUrl: result.explorerUrl,
+          nearBlocksUrl: result.nearBlocksUrl,
+          ...pendingData,
+        },
+        suggestedActions: [
+          `Check status of ${result.depositAddress}`,
+          'Get another quote',
+        ],
+      };
+    } catch (error) {
+      this.pendingQuote = null;
+      return {
+        message: `❌ **Swap Failed**\n\n${error instanceof Error ? error.message : 'Unknown error'}\n\nPlease try again.`,
         type: 'error',
         suggestedActions: ['Try again', 'Help'],
       };

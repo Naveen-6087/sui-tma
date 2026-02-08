@@ -29,9 +29,14 @@ import {
   wallets,
   nearAccounts,
   nearLegacyCreds,
+  privyWallets,
   getAgentOpts,
   createLinkSignature,
 } from "@/lib/telegram-store";
+import {
+  createPrivyUserAndWallet,
+  isPrivyConfigured,
+} from "@/lib/privy";
 
 // ============== Config ==============
 
@@ -209,17 +214,20 @@ async function handleStart(chatId: number) {
   const wallet = wallets.get(chatId.toString());
   const linked = nearAccounts.get(chatId.toString());
   const legacy = nearLegacyCreds.get(chatId.toString());
+  const privyEntry = privyWallets.get(chatId.toString());
   const walletLine = wallet
     ? `✅ Wallet: \`${wallet.slice(0, 10)}...${wallet.slice(-6)}\``
     : "⚠️ No wallet linked — use /wallet <address>";
 
-  const nearStatus = linked
-    ? `✅ NEAR Wallet: \`${linked}\` (connected securely)`
-    : legacy
-      ? `✅ NEAR Account: \`${legacy.accountId}\` (imported — consider /connect instead)`
-      : nearOk
-        ? `ℹ️ Server NEAR Account: \`${nearAccount}\``
-        : "❌ No NEAR account — use /connect to link yours";
+  const nearStatus = privyEntry
+    ? `✅ NEAR Wallet: \`${privyEntry.nearAddress.slice(0, 12)}...\` (Privy embedded — auto-sign enabled)`
+    : linked
+      ? `✅ NEAR Wallet: \`${linked}\` (connected securely)`
+      : legacy
+        ? `✅ NEAR Account: \`${legacy.accountId}\` (imported — consider /connect instead)`
+        : nearOk
+          ? `ℹ️ Server NEAR Account: \`${nearAccount}\``
+          : "❌ No NEAR account — use /connect to create one";
 
   await sendMessage(
     chatId,
@@ -230,7 +238,7 @@ async function handleStart(chatId: number) {
       `• "swap 100 USDC for ETH"\n` +
       `• "quote 50 USDT to BTC"\n\n` +
       `*Commands:*\n` +
-      `/connect — 🔗 Connect NEAR wallet (secure)\n` +
+      `/connect — 🔗 Create NEAR wallet (Privy)\n` +
       `/disconnect — Unlink NEAR wallet\n` +
       `/swap — Start a swap\n` +
       `/tokens — Supported tokens\n` +
@@ -340,9 +348,10 @@ async function handleUpdate(update: Record<string, unknown>) {
     }
 
     // Handle "Disconnect" button press
-    if (data === 'agent:disconnect') {
+    if (data === 'agent:disconnect' || data === 'agent:Disconnect') {
       nearAccounts.delete(chatId.toString());
       nearLegacyCreds.delete(chatId.toString());
+      privyWallets.delete(chatId.toString());
       await sendMessage(chatId, "✅ NEAR wallet disconnected.", {
         reply_markup: buildKeyboard(["Connect NEAR", "Help"]),
       });
@@ -421,13 +430,15 @@ async function handleUpdate(update: Record<string, unknown>) {
   if (text === "/disconnect" || text === "/delete") {
     const hadLink = nearAccounts.has(chatId.toString());
     const hadLegacy = nearLegacyCreds.has(chatId.toString());
+    const hadPrivy = privyWallets.has(chatId.toString());
     nearAccounts.delete(chatId.toString());
     nearLegacyCreds.delete(chatId.toString());
+    privyWallets.delete(chatId.toString());
 
-    if (hadLink || hadLegacy) {
+    if (hadLink || hadLegacy || hadPrivy) {
       await sendMessage(
         chatId,
-        "✅ *NEAR wallet disconnected.*\n\nYour account has been unlinked. Swaps will now show deposit addresses for manual sending.\n\nUse /connect to link a new wallet.",
+        "✅ *NEAR wallet disconnected.*\n\nYour account has been unlinked. Swaps will now show deposit addresses for manual sending.\n\nUse /connect to set up a new Privy wallet.",
         { reply_markup: buildKeyboard(["Connect NEAR", "Help"]) },
       );
     } else {
@@ -564,56 +575,82 @@ async function handleUpdate(update: Record<string, unknown>) {
 // ============== /connect Command =============================
 
 async function handleConnectCommand(chatId: number) {
-  const sig = createLinkSignature(chatId.toString());
-  const connectParams = `chatId=${chatId}&sig=${sig}`;
-  const webLinkUrl = `${APP_URL}/telegram/link-wallet?${connectParams}`;
-  const miniAppUrl = `${APP_URL}/telegram/connect-wallet?${connectParams}`;
+  // Check for existing Privy wallet
+  const existingPrivy = privyWallets.get(chatId.toString());
+  if (existingPrivy) {
+    await sendMessage(
+      chatId,
+      `✅ *NEAR Wallet Already Connected (Privy)*\n\n` +
+        `Account: \`${existingPrivy.nearAddress}\`\n\n` +
+        `Your swaps will auto-execute from this wallet.\n` +
+        `Use /disconnect to unlink.`,
+      { reply_markup: buildKeyboard(["Swap 0.01 NEAR for SUI", "Show tokens", "Disconnect"]) },
+    );
+    return;
+  }
 
-  // Check if already connected
-  const existing = nearAccounts.get(chatId.toString());
-  const statusLine = existing
-    ? `\n✅ Currently connected: \`${existing}\`\n`
-    : '';
+  // Check for existing legacy connections
+  const existingNear = nearAccounts.get(chatId.toString());
+  const existingLegacy = nearLegacyCreds.get(chatId.toString());
+  if (existingNear || existingLegacy) {
+    const acct = existingNear || existingLegacy?.accountId;
+    await sendMessage(
+      chatId,
+      `✅ *NEAR Wallet Already Connected*\n\n` +
+        `Account: \`${acct}\`\n\n` +
+        `Use /disconnect first, then /connect to set up a Privy embedded wallet.`,
+      { reply_markup: buildKeyboard(["Disconnect", "Show tokens"]) },
+    );
+    return;
+  }
 
-  await sendMessage(
-    chatId,
-    `🔗 *Connect NEAR Wallet*${statusLine}\n\n` +
-      `Choose how to connect:\n\n` +
-      `*Option 1 — Mini App (Recommended)*\n` +
-      `Tap the button below to open the wallet connector right here in Telegram.\n\n` +
-      `*Option 2 — Web Link*\n` +
-      `Open this link in your browser to connect:\n` +
-      `[Connect via Browser](${webLinkUrl})\n\n` +
-      `🔒 *Both methods are secure* — your private keys never leave your wallet. Only your account ID (e.g. \`alice.near\`) is shared with the bot.`,
-    {
-      reply_markup: {
-        inline_keyboard: [
-          [
-            {
-              text: '🔗 Open Wallet Connector',
-              web_app: { url: miniAppUrl },
-            },
-          ],
-          [
-            {
-              text: '🌐 Open in Browser',
-              url: webLinkUrl,
-            },
-          ],
-          ...(existing
-            ? [
-                [
-                  {
-                    text: '❌ Disconnect Current',
-                    callback_data: 'agent:disconnect',
-                  },
-                ],
-              ]
-            : []),
-        ],
-      },
-    },
-  );
+  // Check if Privy is configured
+  if (!isPrivyConfigured()) {
+    // Fall back to old connect flow if Privy not configured
+    const sig = createLinkSignature(chatId.toString());
+    const webLinkUrl = `${APP_URL}/telegram/link-wallet?chatId=${chatId}&sig=${sig}`;
+    await sendMessage(
+      chatId,
+      `🔗 *Connect NEAR Wallet*\n\n` +
+        `Open this link in your browser to connect:\n` +
+        `[Connect via Browser](${webLinkUrl})`,
+    );
+    return;
+  }
+
+  // Use Privy to create embedded NEAR wallet
+  await sendMessage(chatId, `⏳ *Setting up your NEAR wallet...*\n\nCreating a secure embedded wallet via Privy. Please wait...`);
+
+  try {
+    const walletInfo = await createPrivyUserAndWallet(chatId);
+
+    // Store in the Privy wallets map
+    privyWallets.set(chatId.toString(), {
+      privyUserId: walletInfo.privyUserId,
+      walletId: walletInfo.walletId,
+      nearAddress: walletInfo.nearAddress,
+      telegramUserId: chatId,
+    });
+
+    await sendMessage(
+      chatId,
+      `✅ *NEAR Wallet Created!*\n\n` +
+        `🔑 *Your NEAR Address:*\n\`${walletInfo.nearAddress}\`\n\n` +
+        `This is a Privy-managed embedded wallet. To start swapping:\n\n` +
+        `1️⃣ Send NEAR or tokens to the address above\n` +
+        `2️⃣ Then say "swap 0.01 NEAR for SUI"\n` +
+        `3️⃣ The bot will auto-sign deposits for you!\n\n` +
+        `🔒 *Fully secure* — keys are managed by Privy's TEE infrastructure. No private keys are shared.\n\n` +
+        `Use /disconnect to unlink.`,
+      { reply_markup: buildKeyboard(["Swap 0.01 NEAR for SUI", "Show tokens"]) },
+    );
+  } catch (error) {
+    console.error('[Privy] Failed to create wallet:', error);
+    await sendMessage(
+      chatId,
+      `❌ *Wallet Setup Failed*\n\n${error instanceof Error ? error.message : 'Unknown error'}\n\nPlease try again with /connect.`,
+    );
+  }
 }
 
 // ============== Route Handlers ==============
@@ -637,16 +674,16 @@ export async function GET() {
   return NextResponse.json({
     ok: true,
     bot: "NEAR Intents Swap Bot",
-    version: "4.0.0",
+    version: "5.0.0",
     enabled: BOT_ENABLED,
     nearAccount: isNearAccountConfigured() ? getNearAccountId() : null,
+    privyConfigured: isPrivyConfigured(),
     features: [
       "cross-chain-swaps",
       "natural-language",
       "near-intents-1click",
-      "secure-wallet-connect",
-      "telegram-mini-app",
-      "web-link-auth",
+      "privy-embedded-wallets",
+      "server-side-signing",
       "legacy-import",
     ],
   });
