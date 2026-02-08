@@ -336,11 +336,13 @@ async function handleFundCommand(chatId: number) {
   // Build Mini App URL for rich funding page
   const fundAppUrl = `${APP_URL}/telegram/fund?address=${encodeURIComponent(nearAddr)}&chatId=${chatId}`;
 
+  // NOTE: Telegram callback_data has a 64-byte limit.
+  // The NEAR address alone can be 64 chars, so we use short callback keys
+  // and look up the address from the privyWallets/nearAccounts maps.
   const replyMarkup = {
     inline_keyboard: [
       [{ text: '📱 Open Funding Page', web_app: { url: fundAppUrl } }],
-      [{ text: '📋 Copy Address', callback_data: `copy:${nearAddr}` }],
-      [{ text: '💰 Check Balance', callback_data: 'agent:Balance' }],
+      [{ text: '💰 Check Balance', callback_data: 'cmd:balance' }],
     ],
   };
 
@@ -348,11 +350,11 @@ async function handleFundCommand(chatId: number) {
   const photoSent = await sendPhoto(
     chatId,
     qrUrl,
-    `💳 Fund Your Wallet\n\nSend NEAR to this address:\n${nearAddr}\n\nScan the QR code or tap the button below for the full funding page.`,
+    `💳 Fund Your Wallet\n\nSend NEAR to this address:\n${nearAddr}\n\nScan the QR code or tap Open Funding Page for copy button & wallet links.`,
     { reply_markup: replyMarkup },
   );
 
-  // Fallback: if photo fails, send as a regular text message with link to QR
+  // Fallback: if photo fails, send as a regular text message
   if (!photoSent) {
     await sendMessage(
       chatId,
@@ -470,9 +472,19 @@ async function handleUpdate(update: Record<string, unknown>) {
     }
 
     // Handle "Copy Address" from fund command
-    if (data?.startsWith('copy:')) {
-      const addr = data.slice(5);
-      await sendMessage(chatId, `\`${addr}\`\n\nTap and hold the address above to copy it.`);
+    if (data === 'cmd:copy') {
+      const pEntry = privyWallets.get(chatId.toString());
+      const lEntry = nearAccounts.get(chatId.toString());
+      const addr = pEntry?.nearAddress || lEntry || '';
+      if (addr) {
+        await sendMessage(chatId, `\`${addr}\`\n\nTap and hold the address above to copy it.`);
+      }
+      return;
+    }
+
+    // Handle "Check Balance" from fund command
+    if (data === 'cmd:balance') {
+      await handleBalanceCommand(chatId);
       return;
     }
 

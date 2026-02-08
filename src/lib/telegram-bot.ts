@@ -346,11 +346,12 @@ export function createTradingBot(token: string): Bot<BotContext> {
     // Mini App funding page URL
     const fundAppUrl = `${APP_URL}/telegram/fund?address=${encodeURIComponent(nearAddr)}&chatId=${chatId}`;
 
+    // NOTE: Telegram callback_data has a 64-byte limit.
+    // NEAR addresses can be 64 chars, so we use short callback keys.
     const replyMarkup = {
       inline_keyboard: [
         [{ text: '📱 Open Funding Page', web_app: { url: fundAppUrl } }],
-        [{ text: '📋 Copy Address', callback_data: `copy:${nearAddr}` }],
-        [{ text: '💰 Check Balance', callback_data: 'agent:Balance' }],
+        [{ text: '💰 Check Balance', callback_data: 'cmd:balance' }],
       ],
     };
 
@@ -360,7 +361,7 @@ export function createTradingBot(token: string): Bot<BotContext> {
         caption:
           `💳 Fund Your Wallet\n\n` +
           `Send NEAR to this address:\n${nearAddr}\n\n` +
-          `Scan the QR code or tap the button below for the full funding page.`,
+          `Scan the QR code or tap Open Funding Page for copy button & wallet links.`,
         parse_mode: "Markdown",
         reply_markup: replyMarkup,
       });
@@ -654,12 +655,38 @@ export function createTradingBot(token: string): Bot<BotContext> {
       return;
     }
 
-    // Handle "Copy Address" from fund command
-    if (data?.startsWith('copy:')) {
-      const addr = data.slice(5);
-      await ctx.reply(`\`${addr}\`\n\nTap and hold the address above to copy it.`, {
-        parse_mode: "Markdown",
-      });
+    // Handle "Copy Address" from fund command — look up address from store
+    if (data === 'cmd:copy') {
+      const pEntry = privyWallets.get(chatId);
+      const lEntry = nearAccounts.get(chatId);
+      const addr = pEntry?.nearAddress || lEntry || '';
+      if (addr) {
+        await ctx.reply(`\`${addr}\`\n\nTap and hold the address above to copy it.`, {
+          parse_mode: "Markdown",
+        });
+      }
+      return;
+    }
+
+    // Handle "Check Balance" from fund command
+    if (data === 'cmd:balance') {
+      const pEntry = privyWallets.get(chatId);
+      const lEntry = nearAccounts.get(chatId);
+      const nearAddr = pEntry?.nearAddress || lEntry;
+      if (!nearAddr) {
+        await ctx.reply("⚠️ No NEAR wallet connected. Use /connect first.");
+        return;
+      }
+      try {
+        const balance = await getNearBalance(nearAddr);
+        await ctx.reply(
+          `💰 *Balance:* ${balance.availableNear} NEAR available\n` +
+            `(${balance.nearBalance} NEAR total)`,
+          { parse_mode: "Markdown" },
+        );
+      } catch {
+        await ctx.reply("❌ Couldn't fetch balance. Try /balance.");
+      }
       return;
     }
 
